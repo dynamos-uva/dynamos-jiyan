@@ -1,7 +1,7 @@
 # Use Bash shell instead of default /bin/sh to support trap and extended features
 SHELL := /bin/bash
 # Replace slashes in the current Git branch name with dashes (e.g., issue/123 -> issue-123)
-branch_name := $(shell git rev-parse --abbrev-ref HEAD | sed 's#/#-#g')
+branch_name := $(shell git rev-parse --abbrev-ref HEAD | sed 's/\//-/g')
 # List of SQL-based microservices to build and push
 sql_microservices := sql-algorithm sql-anonymize sql-aggregate sql-test
 # List of DYNAMOS core services
