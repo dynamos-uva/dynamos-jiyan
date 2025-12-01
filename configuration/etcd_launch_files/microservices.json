@@ -41,5 +41,47 @@
         "invalidArchetypes": [
             "computeToData"
         ]
+    },
+    {
+        "name": "new-service",
+        "label": "dataProvider",
+        "allowedOutputs": [],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-merge-datasets",
+        "label": "dataProvider",
+        "allowedOutputs": ["ml-anonymize-dataset"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-anonymize-dataset",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-synthetic-dataset-generation", "ml-differential-privacy","ml-model-training"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-synthetic-dataset-generation",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-model-training"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-differential-privacy",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-model-training"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-model-training",
+        "label": "computeProvider",
+        "allowedOutputs": [],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-model-training",
+        "label": "computeProvider",
+        "allowedOutputs": [],
+        "invalidArchetypes": []
     }
 ]
