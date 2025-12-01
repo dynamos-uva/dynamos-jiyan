@@ -234,8 +234,8 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx: Context 
         logger.debug(f"[{config.service_name}] df head:{data_df.head()}")
 
         # Add new column to df to see if microservice works
-        newColumn = "<<< testMicroservice WORKING !!!!!>>>"
-        data_df["testMicroserviceMarker"] = newColumn
+        newColumn = "<<< test-microservice WORKING !!!!!>>>"
+        data_df["test-microserviceMarker"] = newColumn
 
         logger.debug(f"[{config.service_name}] df head with new column:{data_df.head()}")
 
