@@ -1,8 +1,8 @@
 SHELL := /bin/bash
-targets := sql-query ml-differential-privacy ml-model-training ml-merge-datasets ml-anonymize-dataset ml-synthetic-dataset-generation
+targets := sql-query ml-differential-privacy ml-model-training ml-merge-datasets ml-anonymize-dataset ml-synthetic-dataset-generation testMicroservice
 datasets := "../configuration/datasets/"
 branch_name := $(shell git rev-parse --abbrev-ref HEAD)
-dockerhub_account := dynamos1
+dockerhub_account := tamjiyan
 PUSH ?= 1  # <-- Add this line; default is 1 (do push)
 
 .PHONY: proto $(targets) dynamos
