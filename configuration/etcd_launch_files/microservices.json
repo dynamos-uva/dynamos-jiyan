@@ -83,5 +83,11 @@
         "label": "computeProvider",
         "allowedOutputs": [],
         "invalidArchetypes": []
+    },
+    {
+        "name": "test-microservice",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-synthetic-dataset-generation", "ml-differential-privacy","ml-model-training"],
+        "invalidArchetypes": []
     }
 ]
