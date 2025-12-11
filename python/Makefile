@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-targets := sql-query ml-differential-privacy ml-model-training ml-merge-datasets ml-anonymize-dataset ml-synthetic-dataset-generation test-microservice
+targets := sql-query ml-differential-privacy ml-model-training ml-merge-datasets ml-anonymize-dataset ml-synthetic-dataset-generation test-microservice vfl-train-model vfl-train vfl-train-demo vfl-train-model-demo
 datasets := "../configuration/datasets/"
 branch_name := $(shell git rev-parse --abbrev-ref HEAD)
 dockerhub_account := tamjiyan

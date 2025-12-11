@@ -16,6 +16,9 @@ COPY requirements.txt .
 COPY ./*.csv /app/datasets
 COPY $WHEEL_NAME /tmp/
 
+COPY ./dataset[s]/ /app/datasets
+COPY $WHEEL_NAME /tmp/
+
 RUN pip install /tmp/$WHEEL_NAME
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --upgrade numpy pandas
@@ -26,6 +29,9 @@ COPY ./data /app/data
 COPY ./*.py /app/$NAME
 COPY ./protofiles/*.py /app/protofiles
 
+RUN if [ -f "torch_requirements.txt" ]; then \
+  pip install -r torch_requirements.txt; \
+fi
 
 ENV  ENV="PROD"
 ENV PYTHONPATH="/app/protofiles"

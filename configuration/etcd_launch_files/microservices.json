@@ -89,5 +89,29 @@
         "label": "computeProvider",
         "allowedOutputs": ["ml-synthetic-dataset-generation", "ml-differential-privacy","ml-model-training"],
         "invalidArchetypes": []
-    }
+    },
+    {
+    "name": "vfl-train-model",
+    "label": "computeProvider",
+    "allowedOutputs": ["vfl-train"],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "vfl-train",
+    "label": "computeProvider",
+    "allowedOutputs": [],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "vfl-train-model-demo",
+    "label": "computeProvider",
+    "allowedOutputs": ["vfl-train-demo"],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "vfl-train-demo",
+    "label": "computeProvider",
+    "allowedOutputs": [],
+    "invalidArchetypes": []
+  }
 ]

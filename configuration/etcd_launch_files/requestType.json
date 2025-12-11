@@ -28,5 +28,13 @@
             "ml-synthetic-dataset-generation": "synthetic-dataset-generation",
             "ml-differential-privacy": "differential-privacy"
         }
+    },
+    {
+        "name": "vflTrainModelRequest",
+        "requiredServices": ["vfl-train-model-demo", "vfl-train-demo"]
+    },
+    {
+        "name": "vflTrainRequest",
+        "requiredServices": ["vfl-train-demo"]
     }
 ]
