@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clientone
+  namespace: clientone
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clientone
+  template:
+    metadata:
+      labels:
+        app: clientone
+        type: agent
+      annotations:
+        "linkerd.io/inject" : enabled
+    spec:
+      serviceAccountName: job-creator-clientone
+      containers:
+      - name: clientone
+        image: {{ .Values.dockerArtifactAccount }}/agent:{{ .Values.branchNameTag }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DATA_STEWARD_NAME
+          value: clientone
+        - name: MICROSERVICE_REPOSITORY_NAME
+          value: tamjiyan
+        - name: SIDECAR_REPOSITORY_NAME
+          value: tamjiyan
+        - name: OC_AGENT_HOST
+          value: {{ .Values.tracingEndpoint }}
+        - name: LOCAL_DEV
+          value: "true"
+      - name: sidecar
+        image: {{ .Values.dockerArtifactAccount }}/sidecar:{{ .Values.branchNameTag }}
+        imagePullPolicy: Always
+        env:
+        - name: AMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rabbit
+              key: password
+        - name: AMQ_USER
+          value: normal_user
+        - name: OC_AGENT_HOST
+          value: {{ .Values.tracingEndpoint }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: clientone
+  namespace: clientone
+spec:
+  selector:
+    app: clientone
+    type: agent
+  ports:
+    - name: http-clientone-api
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clientone-ingress
+  namespace: clientone
+  annotations:
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: clientone.clientone.svc.cluster.local
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/agent/v1/vflTrainRequest/clientone"
+        backend:
+          service:
+            name: clientone
+            port:
+              number: 8080
+
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: clientone-pv
+spec:
+  capacity:
+    storage: 10Gi
+  storageClassName: standard
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+      # local path on node
+    path: "/mnt/data"
+  persistentVolumeReclaimPolicy: Retain
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - clientone
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clientone-pvc
+  namespace: clientone
+spec:
+  volumeName: clientone-pv
+  accessModes:
+    - ReadWriteOnce   # Needed for multiple pods to mount simultaneously
+  resources:
+    requests:
+      storage: 5Gi    # Adjust size as needed
+  storageClassName: standard

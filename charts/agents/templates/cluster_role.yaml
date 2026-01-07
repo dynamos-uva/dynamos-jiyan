@@ -50,3 +50,87 @@ subjects:
 - kind: ServiceAccount
   name: job-creator-vu
   namespace: vu
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: job-creator-clientone
+  namespace: clientone
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-creator-clientone
+  namespace: clientone
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: job-creator
+subjects:
+- kind: ServiceAccount
+  name: job-creator-clientone
+  namespace: clientone
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: job-creator-clienttwo
+  namespace: clienttwo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-creator-clienttwo
+  namespace: clienttwo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: job-creator
+subjects:
+- kind: ServiceAccount
+  name: job-creator-clienttwo
+  namespace: clienttwo
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: job-creator-clientthree
+  namespace: clientthree
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-creator-clientthree
+  namespace: clientthree
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: job-creator
+subjects:
+- kind: ServiceAccount
+  name: job-creator-clientthree
+  namespace: clientthree
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: job-creator-server
+  namespace: server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: job-creator-server
+  namespace: server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: job-creator
+subjects:
+- kind: ServiceAccount
+  name: job-creator-server
+  namespace: server

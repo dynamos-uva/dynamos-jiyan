@@ -6,7 +6,6 @@ import (
 	"log"
 	"strings"
 	"time"
-
 	"github.com/Jorrit05/DYNAMOS/pkg/etcd"
 	"github.com/Jorrit05/DYNAMOS/pkg/lib"
 )

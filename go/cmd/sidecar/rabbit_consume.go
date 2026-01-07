@@ -96,9 +96,9 @@ func (s *serverInstance) handleCompositionRequestResponse(msg amqp.Delivery, str
 	return s.handleResponse(msg, stream, &pb.CompositionRequest{})
 }
 
-func (s *serverInstance) handleSqlDataRequest(msg amqp.Delivery, stream pb.RabbitMQ_ConsumeServer) error {
-	logger.Debug("Starting handleSqlDataRequest")
-	return s.handleResponse(msg, stream, &pb.SqlDataRequest{})
+func (s *serverInstance) handleRequest(msg amqp.Delivery, stream pb.RabbitMQ_ConsumeServer) error {
+	logger.Debug("Starting handlaRequest")
+	return s.handleResponse(msg, stream, &pb.Request{})
 }
 
 func (s *serverInstance) handleMicroserviceCommunication(msg amqp.Delivery, stream pb.RabbitMQ_ConsumeServer) error {

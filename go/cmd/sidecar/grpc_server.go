@@ -127,9 +127,9 @@ func (s *serverInstance) Consume(in *pb.ConsumeRequest, stream pb.RabbitMQ_Consu
 				logger.Sugar().Errorf("Error handling validation response: %v", err)
 				return status.Error(codes.Internal, err.Error())
 			}
-		case "sqlDataRequest":
-			if err := s.handleSqlDataRequest(msg, stream); err != nil {
-				logger.Sugar().Errorf("Error handling sqlData request: %v", err)
+		case "request":
+			if err := s.handleRequest(msg, stream); err != nil {
+				logger.Sugar().Errorf("Error handling request: %v", err)
 				return status.Error(codes.Internal, err.Error())
 			}
 		case "microserviceCommunication":

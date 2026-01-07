@@ -47,7 +47,6 @@ func main() {
 	defer logger.Sync() // flushes buffer, if any
 	defer etcdClient.Close()
 
-	// Initialize the tracer for this service
 	_, err := lib.InitTracer(serviceName)
 	if err != nil {
 		logger.Sugar().Fatalf("Failed to create ocagent-exporter: %v", err)
@@ -74,6 +73,7 @@ func main() {
 
 	apiMux := http.NewServeMux()
 	apiMux.Handle("/requestApproval", &ochttp.Handler{Handler: requestHandler()})
+	apiMux.Handle("/getTrainingStatus", &ochttp.Handler{Handler: getTrainingStatusHandler()})
 	apiMux.Handle("/getAvailableProviders", &ochttp.Handler{Handler: availableProvidersHandler()})
 	// go socketServer(apiMux)
 	// server := socketio.NewServer(&engineio.Options{

@@ -25,7 +25,16 @@ func handleIncomingMessages(ctx context.Context, grpcMsg *pb.SideCarMessage) err
 		if err := grpcMsg.Body.UnmarshalTo(validationResponse); err != nil {
 			logger.Sugar().Fatalf("Failed to unmarshal message: %v", err)
 		}
-		handleRequestApproval(ctx, validationResponse)
+		handleRequestApproval(ctx, validationResponse, false)
+
+	case "revalidationResponse":
+		// I think this is unused 
+		// validationResponse is the flow where a policy Enforcer approved or denied a request
+		validationResponse := &pb.ValidationResponse{}
+		if err := grpcMsg.Body.UnmarshalTo(validationResponse); err != nil {
+			logger.Sugar().Fatalf("Failed to unmarshal message: %v", err)
+		}
+		handleRequestApproval(ctx, validationResponse, true)
 
 	case "policyUpdate":
 		// policyUpdate is the flow where a contract is changed, and jobs need to be updated

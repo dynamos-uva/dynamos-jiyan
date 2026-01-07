@@ -29,11 +29,8 @@ type RequestMetadata struct {
 	JobName          string                 `protobuf:"bytes,3,opt,name=job_name,json=jobName,proto3" json:"job_name,omitempty"`
 	ReturnAddress    string                 `protobuf:"bytes,4,opt,name=return_address,json=returnAddress,proto3" json:"return_address,omitempty"`
 	JobId            string                 `protobuf:"bytes,5,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
-	// Optional Binary or textual representation of span context (in proto3, all fields are "optional" by default (unless marked as repeated or oneof)
-	// adheres to the msComm.Traces type, also expected when passing it to StartRemoteParentSpan() function
-	Traces        map[string][]byte `protobuf:"bytes,6,rep,name=traces,proto3" json:"traces,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *RequestMetadata) Reset() {
@@ -101,13 +98,6 @@ func (x *RequestMetadata) GetJobId() string {
 	return ""
 }
 
-func (x *RequestMetadata) GetTraces() map[string][]byte {
-	if x != nil {
-		return x.Traces
-	}
-	return nil
-}
-
 type ServiceName struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ServiceName   string                 `protobuf:"bytes,1,opt,name=service_name,json=serviceName,proto3" json:"service_name,omitempty"`
@@ -156,17 +146,13 @@ var File_generic_proto protoreflect.FileDescriptor
 
 const file_generic_proto_rawDesc = "" +
 	"\n" +
-	"\rgeneric.proto\x12\adynamos\x1a\x1bgoogle/protobuf/empty.proto\"\xb7\x02\n" +
+	"\rgeneric.proto\x12\adynamos\x1a\x1bgoogle/protobuf/empty.proto\"\xbe\x01\n" +
 	"\x0fRequestMetadata\x12%\n" +
 	"\x0ecorrelation_id\x18\x01 \x01(\tR\rcorrelationId\x12+\n" +
 	"\x11destination_queue\x18\x02 \x01(\tR\x10destinationQueue\x12\x19\n" +
 	"\bjob_name\x18\x03 \x01(\tR\ajobName\x12%\n" +
 	"\x0ereturn_address\x18\x04 \x01(\tR\rreturnAddress\x12\x15\n" +
-	"\x06job_id\x18\x05 \x01(\tR\x05jobId\x12<\n" +
-	"\x06traces\x18\x06 \x03(\v2$.dynamos.RequestMetadata.TracesEntryR\x06traces\x1a9\n" +
-	"\vTracesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\fR\x05value:\x028\x01\"0\n" +
+	"\x06job_id\x18\x05 \x01(\tR\x05jobId\"0\n" +
 	"\vServiceName\x12!\n" +
 	"\fservice_name\x18\x01 \x01(\tR\vserviceName2G\n" +
 	"\aGeneric\x12<\n" +
@@ -185,22 +171,20 @@ func file_generic_proto_rawDescGZIP() []byte {
 	return file_generic_proto_rawDescData
 }
 
-var file_generic_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_generic_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_generic_proto_goTypes = []any{
 	(*RequestMetadata)(nil), // 0: dynamos.RequestMetadata
 	(*ServiceName)(nil),     // 1: dynamos.ServiceName
-	nil,                     // 2: dynamos.RequestMetadata.TracesEntry
-	(*emptypb.Empty)(nil),   // 3: google.protobuf.Empty
+	(*emptypb.Empty)(nil),   // 2: google.protobuf.Empty
 }
 var file_generic_proto_depIdxs = []int32{
-	2, // 0: dynamos.RequestMetadata.traces:type_name -> dynamos.RequestMetadata.TracesEntry
-	1, // 1: dynamos.Generic.InitTracer:input_type -> dynamos.ServiceName
-	3, // 2: dynamos.Generic.InitTracer:output_type -> google.protobuf.Empty
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	1, // 0: dynamos.Generic.InitTracer:input_type -> dynamos.ServiceName
+	2, // 1: dynamos.Generic.InitTracer:output_type -> google.protobuf.Empty
+	1, // [1:2] is the sub-list for method output_type
+	0, // [0:1] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_generic_proto_init() }
@@ -214,7 +198,7 @@ func file_generic_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_generic_proto_rawDesc), len(file_generic_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

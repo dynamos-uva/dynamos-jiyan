@@ -9,6 +9,7 @@ import (
 )
 
 func handleIncomingMessages(ctx context.Context, grpcMsg *pb.SideCarMessage) error {
+	logger.Sugar().Info("received incoming message: ", grpcMsg)
 	switch grpcMsg.Type {
 	case "requestApproval":
 		ctx, span, err := lib.StartRemoteParentSpan(ctx, serviceName+"/func: checkRequestApproval", grpcMsg.Traces)
@@ -22,8 +23,17 @@ func handleIncomingMessages(ctx context.Context, grpcMsg *pb.SideCarMessage) err
 			logger.Sugar().Fatalf("Failed to unmarshal message: %v", err)
 		}
 
-		logger.Sugar().Infof("User name: %s", requestApproval.User.UserName)
-		checkRequestApproval(ctx, &requestApproval)
+		if requestApproval.Type == "policyRemoval" {
+			removePolicy()
+			logger.Sugar().Infof("Policy removal")
+		} else if requestApproval.Type == "policyReintroduction" {
+			reintroducePolicy()
+			logger.Sugar().Infof("Reintroduction of policy")
+		} else {
+			logger.Sugar().Infof("User name: %s", requestApproval.User.UserName)
+			checkRequestApproval(ctx, &requestApproval)
+		}
+
 	case "policyUpdate":
 		ctx, span, err := lib.StartRemoteParentSpan(ctx, serviceName+"/func: policyUpdate", grpcMsg.Traces)
 		if err != nil {
@@ -35,6 +45,7 @@ func handleIncomingMessages(ctx context.Context, grpcMsg *pb.SideCarMessage) err
 		if err := grpcMsg.Body.UnmarshalTo(policyUpdate); err != nil {
 			logger.Sugar().Fatalf("Failed to unmarshal message: %v", err)
 		}
+		logger.Sugar().Info("Send policy update")
 		checkPolicyUpdate(ctx, policyUpdate)
 
 	default:

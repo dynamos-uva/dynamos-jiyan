@@ -28,7 +28,7 @@ const (
 	RabbitMQ_SendRequestApproval_FullMethodName         = "/dynamos.RabbitMQ/SendRequestApproval"
 	RabbitMQ_SendValidationResponse_FullMethodName      = "/dynamos.RabbitMQ/SendValidationResponse"
 	RabbitMQ_SendCompositionRequest_FullMethodName      = "/dynamos.RabbitMQ/SendCompositionRequest"
-	RabbitMQ_SendSqlDataRequest_FullMethodName          = "/dynamos.RabbitMQ/SendSqlDataRequest"
+	RabbitMQ_SendRequest_FullMethodName                 = "/dynamos.RabbitMQ/SendRequest"
 	RabbitMQ_SendPolicyUpdate_FullMethodName            = "/dynamos.RabbitMQ/SendPolicyUpdate"
 	RabbitMQ_SendTest_FullMethodName                    = "/dynamos.RabbitMQ/SendTest"
 	RabbitMQ_SendMicroserviceComm_FullMethodName        = "/dynamos.RabbitMQ/SendMicroserviceComm"
@@ -52,9 +52,9 @@ type RabbitMQClient interface {
 	SendRequestApproval(ctx context.Context, in *RequestApproval, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SendValidationResponse(ctx context.Context, in *ValidationResponse, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SendCompositionRequest(ctx context.Context, in *CompositionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	SendSqlDataRequest(ctx context.Context, in *SqlDataRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SendRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SendPolicyUpdate(ctx context.Context, in *PolicyUpdate, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	SendTest(ctx context.Context, in *SqlDataRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SendTest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SendMicroserviceComm(ctx context.Context, in *MicroserviceCommunication, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreateQueue(ctx context.Context, in *QueueInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteQueue(ctx context.Context, in *QueueInfo, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -168,10 +168,10 @@ func (c *rabbitMQClient) SendCompositionRequest(ctx context.Context, in *Composi
 	return out, nil
 }
 
-func (c *rabbitMQClient) SendSqlDataRequest(ctx context.Context, in *SqlDataRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *rabbitMQClient) SendRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, RabbitMQ_SendSqlDataRequest_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, RabbitMQ_SendRequest_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (c *rabbitMQClient) SendPolicyUpdate(ctx context.Context, in *PolicyUpdate,
 	return out, nil
 }
 
-func (c *rabbitMQClient) SendTest(ctx context.Context, in *SqlDataRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *rabbitMQClient) SendTest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, RabbitMQ_SendTest_FullMethodName, in, out, cOpts...)
@@ -262,9 +262,9 @@ type RabbitMQServer interface {
 	SendRequestApproval(context.Context, *RequestApproval) (*emptypb.Empty, error)
 	SendValidationResponse(context.Context, *ValidationResponse) (*emptypb.Empty, error)
 	SendCompositionRequest(context.Context, *CompositionRequest) (*emptypb.Empty, error)
-	SendSqlDataRequest(context.Context, *SqlDataRequest) (*emptypb.Empty, error)
+	SendRequest(context.Context, *Request) (*emptypb.Empty, error)
 	SendPolicyUpdate(context.Context, *PolicyUpdate) (*emptypb.Empty, error)
-	SendTest(context.Context, *SqlDataRequest) (*emptypb.Empty, error)
+	SendTest(context.Context, *Request) (*emptypb.Empty, error)
 	SendMicroserviceComm(context.Context, *MicroserviceCommunication) (*emptypb.Empty, error)
 	CreateQueue(context.Context, *QueueInfo) (*emptypb.Empty, error)
 	DeleteQueue(context.Context, *QueueInfo) (*emptypb.Empty, error)
@@ -304,13 +304,13 @@ func (UnimplementedRabbitMQServer) SendValidationResponse(context.Context, *Vali
 func (UnimplementedRabbitMQServer) SendCompositionRequest(context.Context, *CompositionRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendCompositionRequest not implemented")
 }
-func (UnimplementedRabbitMQServer) SendSqlDataRequest(context.Context, *SqlDataRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendSqlDataRequest not implemented")
+func (UnimplementedRabbitMQServer) SendRequest(context.Context, *Request) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendRequest not implemented")
 }
 func (UnimplementedRabbitMQServer) SendPolicyUpdate(context.Context, *PolicyUpdate) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendPolicyUpdate not implemented")
 }
-func (UnimplementedRabbitMQServer) SendTest(context.Context, *SqlDataRequest) (*emptypb.Empty, error) {
+func (UnimplementedRabbitMQServer) SendTest(context.Context, *Request) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendTest not implemented")
 }
 func (UnimplementedRabbitMQServer) SendMicroserviceComm(context.Context, *MicroserviceCommunication) (*emptypb.Empty, error) {
@@ -479,20 +479,20 @@ func _RabbitMQ_SendCompositionRequest_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _RabbitMQ_SendSqlDataRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SqlDataRequest)
+func _RabbitMQ_SendRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RabbitMQServer).SendSqlDataRequest(ctx, in)
+		return srv.(RabbitMQServer).SendRequest(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RabbitMQ_SendSqlDataRequest_FullMethodName,
+		FullMethod: RabbitMQ_SendRequest_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RabbitMQServer).SendSqlDataRequest(ctx, req.(*SqlDataRequest))
+		return srv.(RabbitMQServer).SendRequest(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -516,7 +516,7 @@ func _RabbitMQ_SendPolicyUpdate_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _RabbitMQ_SendTest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SqlDataRequest)
+	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -528,7 +528,7 @@ func _RabbitMQ_SendTest_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: RabbitMQ_SendTest_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RabbitMQServer).SendTest(ctx, req.(*SqlDataRequest))
+		return srv.(RabbitMQServer).SendTest(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -655,8 +655,8 @@ var RabbitMQ_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RabbitMQ_SendCompositionRequest_Handler,
 		},
 		{
-			MethodName: "SendSqlDataRequest",
-			Handler:    _RabbitMQ_SendSqlDataRequest_Handler,
+			MethodName: "SendRequest",
+			Handler:    _RabbitMQ_SendRequest_Handler,
 		},
 		{
 			MethodName: "SendPolicyUpdate",

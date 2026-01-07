@@ -25,15 +25,13 @@ type Auth struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-type SqlDataRequest struct {
+type Request struct {
 	Type                string            `json:"type"`
-	Query               string            `json:"query"`
-	Algorithm           string            `json:"algorithm"`
+	Data                map[string]any    `json:"query"`
 	User                map[string]string `json:"user"`
 	Auth                Auth              `json:"auth"`
 	Providers           []string          `json:"providers"`
 	AuthorizedProviders map[string]string `json:"authorizedProviders"`
-	Options             Options           `json:"options"`
 }
 
 type User struct {
@@ -143,6 +141,7 @@ func GenericGetHandler[T any](w http.ResponseWriter, req *http.Request, etcdClie
 			http.Error(w, "Error in requesting config", http.StatusInternalServerError)
 			return
 		}
+
 		jsonData, err = json.Marshal(&targetList)
 		if err != nil {
 			logger.Sugar().Fatalw("Failed to convert map to JSON: %v", err)
@@ -158,7 +157,6 @@ func GenericGetHandler[T any](w http.ResponseWriter, req *http.Request, etcdClie
 			http.Error(w, "Unknown request", http.StatusNotFound)
 			return
 		}
-
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -249,13 +247,21 @@ func PostRequest(url string, body string, extra_headers map[string]string) ([]by
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
+
 	if err != nil {
 		logger.Sugar().Infof("Failed to read response body: %v", err)
 		return []byte(""), err
 	}
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		err = fmt.Errorf(fmt.Sprintf("Bad response from server: %s", resp.Status))
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated &&
+		resp.StatusCode != http.StatusAccepted {
+		bodyStr := string(respBody)
+		if len(bodyStr) > 2000 {
+			bodyStr = bodyStr[:2000] + "...(truncated)"
+		}
+
+		err = fmt.Errorf("Bad response from server: %s; url=%s; body=%q", resp.Status, url, bodyStr)
 		logger.Sugar().Infof("%v", err)
 		return []byte(""), err
 	}

@@ -11,6 +11,7 @@ import (
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -1071,33 +1072,31 @@ func (x *CompositionRequest) GetLocalJobName() string {
 	return ""
 }
 
-type SqlDataRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Type             string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	Query            string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
-	Algorithm        string                 `protobuf:"bytes,3,opt,name=algorithm,proto3" json:"algorithm,omitempty"`
-	AlgorithmColumns map[string]string      `protobuf:"bytes,4,rep,name=algorithm_columns,json=algorithmColumns,proto3" json:"algorithm_columns,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	User             *User                  `protobuf:"bytes,5,opt,name=user,proto3" json:"user,omitempty"`
-	RequestMetadata  *RequestMetadata       `protobuf:"bytes,6,opt,name=request_metadata,json=requestMetadata,proto3" json:"request_metadata,omitempty"`
-	Options          map[string]bool        `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+type Request struct {
+	state           protoimpl.MessageState     `protogen:"open.v1"`
+	Type            string                     `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Data            map[string]*structpb.Value `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	User            *User                      `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	RequestMetadata *RequestMetadata           `protobuf:"bytes,4,opt,name=request_metadata,json=requestMetadata,proto3" json:"request_metadata,omitempty"`
+	Options         map[string]bool            `protobuf:"bytes,5,rep,name=options,proto3" json:"options,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
-func (x *SqlDataRequest) Reset() {
-	*x = SqlDataRequest{}
+func (x *Request) Reset() {
+	*x = Request{}
 	mi := &file_rabbitMQ_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SqlDataRequest) String() string {
+func (x *Request) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SqlDataRequest) ProtoMessage() {}
+func (*Request) ProtoMessage() {}
 
-func (x *SqlDataRequest) ProtoReflect() protoreflect.Message {
+func (x *Request) ProtoReflect() protoreflect.Message {
 	mi := &file_rabbitMQ_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1109,54 +1108,40 @@ func (x *SqlDataRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SqlDataRequest.ProtoReflect.Descriptor instead.
-func (*SqlDataRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use Request.ProtoReflect.Descriptor instead.
+func (*Request) Descriptor() ([]byte, []int) {
 	return file_rabbitMQ_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *SqlDataRequest) GetType() string {
+func (x *Request) GetType() string {
 	if x != nil {
 		return x.Type
 	}
 	return ""
 }
 
-func (x *SqlDataRequest) GetQuery() string {
+func (x *Request) GetData() map[string]*structpb.Value {
 	if x != nil {
-		return x.Query
-	}
-	return ""
-}
-
-func (x *SqlDataRequest) GetAlgorithm() string {
-	if x != nil {
-		return x.Algorithm
-	}
-	return ""
-}
-
-func (x *SqlDataRequest) GetAlgorithmColumns() map[string]string {
-	if x != nil {
-		return x.AlgorithmColumns
+		return x.Data
 	}
 	return nil
 }
 
-func (x *SqlDataRequest) GetUser() *User {
+func (x *Request) GetUser() *User {
 	if x != nil {
 		return x.User
 	}
 	return nil
 }
 
-func (x *SqlDataRequest) GetRequestMetadata() *RequestMetadata {
+func (x *Request) GetRequestMetadata() *RequestMetadata {
 	if x != nil {
 		return x.RequestMetadata
 	}
 	return nil
 }
 
-func (x *SqlDataRequest) GetOptions() map[string]bool {
+func (x *Request) GetOptions() map[string]bool {
 	if x != nil {
 		return x.Options
 	}
@@ -1167,7 +1152,7 @@ var File_rabbitMQ_proto protoreflect.FileDescriptor
 
 const file_rabbitMQ_proto_rawDesc = "" +
 	"\n" +
-	"\x0erabbitMQ.proto\x12\adynamos\x1a\x1bgoogle/protobuf/empty.proto\x1a\x19google/protobuf/any.proto\x1a\rgeneric.proto\x1a\x1fmicroserviceCommunication.proto\"}\n" +
+	"\x0erabbitMQ.proto\x12\adynamos\x1a\x1bgoogle/protobuf/empty.proto\x1a\x19google/protobuf/any.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\rgeneric.proto\x1a\x1fmicroserviceCommunication.proto\"}\n" +
 	"\vInitRequest\x12!\n" +
 	"\fservice_name\x18\x01 \x01(\tR\vserviceName\x12\x1f\n" +
 	"\vrouting_key\x18\x02 \x01(\tR\n" +
@@ -1271,21 +1256,19 @@ const file_rabbitMQ_proto_rawDesc = "" +
 	"\x0edata_providers\x18\x05 \x03(\tR\rdataProviders\x12+\n" +
 	"\x11destination_queue\x18\x06 \x01(\tR\x10destinationQueue\x12\x19\n" +
 	"\bjob_name\x18\a \x01(\tR\ajobName\x12$\n" +
-	"\x0elocal_job_name\x18\b \x01(\tR\flocalJobName\"\xdd\x03\n" +
-	"\x0eSqlDataRequest\x12\x12\n" +
-	"\x04type\x18\x01 \x01(\tR\x04type\x12\x14\n" +
-	"\x05query\x18\x02 \x01(\tR\x05query\x12\x1c\n" +
-	"\talgorithm\x18\x03 \x01(\tR\talgorithm\x12Z\n" +
-	"\x11algorithm_columns\x18\x04 \x03(\v2-.dynamos.SqlDataRequest.AlgorithmColumnsEntryR\x10algorithmColumns\x12!\n" +
-	"\x04user\x18\x05 \x01(\v2\r.dynamos.UserR\x04user\x12C\n" +
-	"\x10request_metadata\x18\x06 \x01(\v2\x18.dynamos.RequestMetadataR\x0frequestMetadata\x12>\n" +
-	"\aoptions\x18\a \x03(\v2$.dynamos.SqlDataRequest.OptionsEntryR\aoptions\x1aC\n" +
-	"\x15AlgorithmColumnsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
+	"\x0elocal_job_name\x18\b \x01(\tR\flocalJobName\"\xfb\x02\n" +
+	"\aRequest\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12.\n" +
+	"\x04data\x18\x02 \x03(\v2\x1a.dynamos.Request.DataEntryR\x04data\x12!\n" +
+	"\x04user\x18\x03 \x01(\v2\r.dynamos.UserR\x04user\x12C\n" +
+	"\x10request_metadata\x18\x04 \x01(\v2\x18.dynamos.RequestMetadataR\x0frequestMetadata\x127\n" +
+	"\aoptions\x18\x05 \x03(\v2\x1d.dynamos.Request.OptionsEntryR\aoptions\x1aO\n" +
+	"\tDataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01\x1a:\n" +
 	"\fOptionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x012\x96\t\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x012\x81\t\n" +
 	"\bRabbitMQ\x12>\n" +
 	"\fInitRabbitMq\x12\x14.dynamos.InitRequest\x1a\x16.google.protobuf.Empty\"\x00\x12E\n" +
 	"\x12InitRabbitForChain\x12\x15.dynamos.ChainRequest\x1a\x16.google.protobuf.Empty\"\x00\x12E\n" +
@@ -1294,10 +1277,10 @@ const file_rabbitMQ_proto_rawDesc = "" +
 	"\fChainConsume\x12\x17.dynamos.ConsumeRequest\x1a\x17.dynamos.SideCarMessage\"\x000\x01\x12I\n" +
 	"\x13SendRequestApproval\x12\x18.dynamos.RequestApproval\x1a\x16.google.protobuf.Empty\"\x00\x12O\n" +
 	"\x16SendValidationResponse\x12\x1b.dynamos.ValidationResponse\x1a\x16.google.protobuf.Empty\"\x00\x12O\n" +
-	"\x16SendCompositionRequest\x12\x1b.dynamos.CompositionRequest\x1a\x16.google.protobuf.Empty\"\x00\x12G\n" +
-	"\x12SendSqlDataRequest\x12\x17.dynamos.SqlDataRequest\x1a\x16.google.protobuf.Empty\"\x00\x12C\n" +
-	"\x10SendPolicyUpdate\x12\x15.dynamos.PolicyUpdate\x1a\x16.google.protobuf.Empty\"\x00\x12=\n" +
-	"\bSendTest\x12\x17.dynamos.SqlDataRequest\x1a\x16.google.protobuf.Empty\"\x00\x12T\n" +
+	"\x16SendCompositionRequest\x12\x1b.dynamos.CompositionRequest\x1a\x16.google.protobuf.Empty\"\x00\x129\n" +
+	"\vSendRequest\x12\x10.dynamos.Request\x1a\x16.google.protobuf.Empty\"\x00\x12C\n" +
+	"\x10SendPolicyUpdate\x12\x15.dynamos.PolicyUpdate\x1a\x16.google.protobuf.Empty\"\x00\x126\n" +
+	"\bSendTest\x12\x10.dynamos.Request\x1a\x16.google.protobuf.Empty\"\x00\x12T\n" +
 	"\x14SendMicroserviceComm\x12\".dynamos.MicroserviceCommunication\x1a\x16.google.protobuf.Empty\"\x00\x12;\n" +
 	"\vCreateQueue\x12\x12.dynamos.QueueInfo\x1a\x16.google.protobuf.Empty\"\x00\x12;\n" +
 	"\vDeleteQueue\x12\x12.dynamos.QueueInfo\x1a\x16.google.protobuf.Empty\"\x00\x12Y\n" +
@@ -1334,19 +1317,20 @@ var file_rabbitMQ_proto_goTypes = []any{
 	(*RequestApprovalResponse)(nil),   // 13: dynamos.RequestApprovalResponse
 	(*PolicyUpdate)(nil),              // 14: dynamos.PolicyUpdate
 	(*CompositionRequest)(nil),        // 15: dynamos.CompositionRequest
-	(*SqlDataRequest)(nil),            // 16: dynamos.SqlDataRequest
+	(*Request)(nil),                   // 16: dynamos.Request
 	nil,                               // 17: dynamos.SideCarMessage.TracesEntry
 	nil,                               // 18: dynamos.UserArchetypes.ArchetypesEntry
 	nil,                               // 19: dynamos.ValidationResponse.ValidDataprovidersEntry
 	nil,                               // 20: dynamos.ValidationResponse.OptionsEntry
 	nil,                               // 21: dynamos.RequestApproval.OptionsEntry
 	nil,                               // 22: dynamos.RequestApprovalResponse.AuthorizedProvidersEntry
-	nil,                               // 23: dynamos.SqlDataRequest.AlgorithmColumnsEntry
-	nil,                               // 24: dynamos.SqlDataRequest.OptionsEntry
+	nil,                               // 23: dynamos.Request.DataEntry
+	nil,                               // 24: dynamos.Request.OptionsEntry
 	(*anypb.Any)(nil),                 // 25: google.protobuf.Any
 	(*RequestMetadata)(nil),           // 26: dynamos.RequestMetadata
-	(*MicroserviceCommunication)(nil), // 27: dynamos.MicroserviceCommunication
-	(*emptypb.Empty)(nil),             // 28: google.protobuf.Empty
+	(*structpb.Value)(nil),            // 27: google.protobuf.Value
+	(*MicroserviceCommunication)(nil), // 28: dynamos.MicroserviceCommunication
+	(*emptypb.Empty)(nil),             // 29: google.protobuf.Empty
 }
 var file_rabbitMQ_proto_depIdxs = []int32{
 	25, // 0: dynamos.SideCarMessage.body:type_name -> google.protobuf.Any
@@ -1367,49 +1351,50 @@ var file_rabbitMQ_proto_depIdxs = []int32{
 	26, // 15: dynamos.PolicyUpdate.request_metadata:type_name -> dynamos.RequestMetadata
 	10, // 16: dynamos.PolicyUpdate.validation_response:type_name -> dynamos.ValidationResponse
 	11, // 17: dynamos.CompositionRequest.user:type_name -> dynamos.User
-	23, // 18: dynamos.SqlDataRequest.algorithm_columns:type_name -> dynamos.SqlDataRequest.AlgorithmColumnsEntry
-	11, // 19: dynamos.SqlDataRequest.user:type_name -> dynamos.User
-	26, // 20: dynamos.SqlDataRequest.request_metadata:type_name -> dynamos.RequestMetadata
-	24, // 21: dynamos.SqlDataRequest.options:type_name -> dynamos.SqlDataRequest.OptionsEntry
+	23, // 18: dynamos.Request.data:type_name -> dynamos.Request.DataEntry
+	11, // 19: dynamos.Request.user:type_name -> dynamos.User
+	26, // 20: dynamos.Request.request_metadata:type_name -> dynamos.RequestMetadata
+	24, // 21: dynamos.Request.options:type_name -> dynamos.Request.OptionsEntry
 	8,  // 22: dynamos.UserArchetypes.ArchetypesEntry.value:type_name -> dynamos.UserAllowedArchetypes
 	7,  // 23: dynamos.ValidationResponse.ValidDataprovidersEntry.value:type_name -> dynamos.DataProvider
-	0,  // 24: dynamos.RabbitMQ.InitRabbitMq:input_type -> dynamos.InitRequest
-	1,  // 25: dynamos.RabbitMQ.InitRabbitForChain:input_type -> dynamos.ChainRequest
-	2,  // 26: dynamos.RabbitMQ.StopReceivingRabbit:input_type -> dynamos.StopRequest
-	4,  // 27: dynamos.RabbitMQ.Consume:input_type -> dynamos.ConsumeRequest
-	4,  // 28: dynamos.RabbitMQ.ChainConsume:input_type -> dynamos.ConsumeRequest
-	12, // 29: dynamos.RabbitMQ.SendRequestApproval:input_type -> dynamos.RequestApproval
-	10, // 30: dynamos.RabbitMQ.SendValidationResponse:input_type -> dynamos.ValidationResponse
-	15, // 31: dynamos.RabbitMQ.SendCompositionRequest:input_type -> dynamos.CompositionRequest
-	16, // 32: dynamos.RabbitMQ.SendSqlDataRequest:input_type -> dynamos.SqlDataRequest
-	14, // 33: dynamos.RabbitMQ.SendPolicyUpdate:input_type -> dynamos.PolicyUpdate
-	16, // 34: dynamos.RabbitMQ.SendTest:input_type -> dynamos.SqlDataRequest
-	27, // 35: dynamos.RabbitMQ.SendMicroserviceComm:input_type -> dynamos.MicroserviceCommunication
-	3,  // 36: dynamos.RabbitMQ.CreateQueue:input_type -> dynamos.QueueInfo
-	3,  // 37: dynamos.RabbitMQ.DeleteQueue:input_type -> dynamos.QueueInfo
-	13, // 38: dynamos.RabbitMQ.SendRequestApprovalResponse:input_type -> dynamos.RequestApprovalResponse
-	12, // 39: dynamos.RabbitMQ.SendRequestApprovalRequest:input_type -> dynamos.RequestApproval
-	28, // 40: dynamos.RabbitMQ.InitRabbitMq:output_type -> google.protobuf.Empty
-	28, // 41: dynamos.RabbitMQ.InitRabbitForChain:output_type -> google.protobuf.Empty
-	28, // 42: dynamos.RabbitMQ.StopReceivingRabbit:output_type -> google.protobuf.Empty
-	5,  // 43: dynamos.RabbitMQ.Consume:output_type -> dynamos.SideCarMessage
-	5,  // 44: dynamos.RabbitMQ.ChainConsume:output_type -> dynamos.SideCarMessage
-	28, // 45: dynamos.RabbitMQ.SendRequestApproval:output_type -> google.protobuf.Empty
-	28, // 46: dynamos.RabbitMQ.SendValidationResponse:output_type -> google.protobuf.Empty
-	28, // 47: dynamos.RabbitMQ.SendCompositionRequest:output_type -> google.protobuf.Empty
-	28, // 48: dynamos.RabbitMQ.SendSqlDataRequest:output_type -> google.protobuf.Empty
-	28, // 49: dynamos.RabbitMQ.SendPolicyUpdate:output_type -> google.protobuf.Empty
-	28, // 50: dynamos.RabbitMQ.SendTest:output_type -> google.protobuf.Empty
-	28, // 51: dynamos.RabbitMQ.SendMicroserviceComm:output_type -> google.protobuf.Empty
-	28, // 52: dynamos.RabbitMQ.CreateQueue:output_type -> google.protobuf.Empty
-	28, // 53: dynamos.RabbitMQ.DeleteQueue:output_type -> google.protobuf.Empty
-	28, // 54: dynamos.RabbitMQ.SendRequestApprovalResponse:output_type -> google.protobuf.Empty
-	28, // 55: dynamos.RabbitMQ.SendRequestApprovalRequest:output_type -> google.protobuf.Empty
-	40, // [40:56] is the sub-list for method output_type
-	24, // [24:40] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	27, // 24: dynamos.Request.DataEntry.value:type_name -> google.protobuf.Value
+	0,  // 25: dynamos.RabbitMQ.InitRabbitMq:input_type -> dynamos.InitRequest
+	1,  // 26: dynamos.RabbitMQ.InitRabbitForChain:input_type -> dynamos.ChainRequest
+	2,  // 27: dynamos.RabbitMQ.StopReceivingRabbit:input_type -> dynamos.StopRequest
+	4,  // 28: dynamos.RabbitMQ.Consume:input_type -> dynamos.ConsumeRequest
+	4,  // 29: dynamos.RabbitMQ.ChainConsume:input_type -> dynamos.ConsumeRequest
+	12, // 30: dynamos.RabbitMQ.SendRequestApproval:input_type -> dynamos.RequestApproval
+	10, // 31: dynamos.RabbitMQ.SendValidationResponse:input_type -> dynamos.ValidationResponse
+	15, // 32: dynamos.RabbitMQ.SendCompositionRequest:input_type -> dynamos.CompositionRequest
+	16, // 33: dynamos.RabbitMQ.SendRequest:input_type -> dynamos.Request
+	14, // 34: dynamos.RabbitMQ.SendPolicyUpdate:input_type -> dynamos.PolicyUpdate
+	16, // 35: dynamos.RabbitMQ.SendTest:input_type -> dynamos.Request
+	28, // 36: dynamos.RabbitMQ.SendMicroserviceComm:input_type -> dynamos.MicroserviceCommunication
+	3,  // 37: dynamos.RabbitMQ.CreateQueue:input_type -> dynamos.QueueInfo
+	3,  // 38: dynamos.RabbitMQ.DeleteQueue:input_type -> dynamos.QueueInfo
+	13, // 39: dynamos.RabbitMQ.SendRequestApprovalResponse:input_type -> dynamos.RequestApprovalResponse
+	12, // 40: dynamos.RabbitMQ.SendRequestApprovalRequest:input_type -> dynamos.RequestApproval
+	29, // 41: dynamos.RabbitMQ.InitRabbitMq:output_type -> google.protobuf.Empty
+	29, // 42: dynamos.RabbitMQ.InitRabbitForChain:output_type -> google.protobuf.Empty
+	29, // 43: dynamos.RabbitMQ.StopReceivingRabbit:output_type -> google.protobuf.Empty
+	5,  // 44: dynamos.RabbitMQ.Consume:output_type -> dynamos.SideCarMessage
+	5,  // 45: dynamos.RabbitMQ.ChainConsume:output_type -> dynamos.SideCarMessage
+	29, // 46: dynamos.RabbitMQ.SendRequestApproval:output_type -> google.protobuf.Empty
+	29, // 47: dynamos.RabbitMQ.SendValidationResponse:output_type -> google.protobuf.Empty
+	29, // 48: dynamos.RabbitMQ.SendCompositionRequest:output_type -> google.protobuf.Empty
+	29, // 49: dynamos.RabbitMQ.SendRequest:output_type -> google.protobuf.Empty
+	29, // 50: dynamos.RabbitMQ.SendPolicyUpdate:output_type -> google.protobuf.Empty
+	29, // 51: dynamos.RabbitMQ.SendTest:output_type -> google.protobuf.Empty
+	29, // 52: dynamos.RabbitMQ.SendMicroserviceComm:output_type -> google.protobuf.Empty
+	29, // 53: dynamos.RabbitMQ.CreateQueue:output_type -> google.protobuf.Empty
+	29, // 54: dynamos.RabbitMQ.DeleteQueue:output_type -> google.protobuf.Empty
+	29, // 55: dynamos.RabbitMQ.SendRequestApprovalResponse:output_type -> google.protobuf.Empty
+	29, // 56: dynamos.RabbitMQ.SendRequestApprovalRequest:output_type -> google.protobuf.Empty
+	41, // [41:57] is the sub-list for method output_type
+	25, // [25:41] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_rabbitMQ_proto_init() }
