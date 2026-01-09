@@ -3,6 +3,8 @@ import numpy as np
 import sys
 import os
 import json
+import socket
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -58,23 +60,32 @@ DEFAULT_LEARNING_RATE = 0.1
 DEFAULT_NOF_CLIENTS = 3  # TODO: make it dynamic 
 SERVER_CHECKPOINT_PATH = "server_checkpoint.pth"
 
-def load_data(file_path):
-    DATA_STEWARD_NAME = os.getenv("DATA_STEWARD_NAME").lower()
+# Changed the data loading to be hardcoded, old way was raising issues
+# Also raises an error instead of returning None now
+def load_data():
+    # Server dataset hardcoded to correct location
+    file_name = "/app/data/outcomeData.csv"
+    logger.info(f"Server dataset: {file_name} loading...")
+    # If file path doesn't exist, raise error.
+    if not os.path.exists(file_name):
+        raise FileNotFoundError(f"Server dataset: {file_name} not found.")
+    # Reads and returns serverdata csv into pandas df
+    return pd.read_csv(file_name, delimiter=",")
 
-    file_name = f"{file_path}/outcomeData.csv"
-
-    if DATA_STEWARD_NAME == "":
-        logger.error("DATA_STEWARD_NAME not set.")
-        file_name = f"{file_path}Data.csv"
-
-    try:
-        data = pd.read_csv(file_name, delimiter=',')
-        logger.debug("after read csv")
-    except FileNotFoundError:
-        logger.error(f"CSV file for table {file_name} not found.")
-        return None
-
-    return data
+# Was necessary in all microservices I used since services would try to connect to sidecar instantly, resulting in crash
+def wait_for_port(host, port, wait_time):
+    deadline = time.time() + wait_time
+    last_err = None
+    # While deadline has not passed keeps trying to connect to sidecar.
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=1):
+                return
+        except OSError as e:
+            last_err = e
+            time.sleep(1)
+    # If time is up raises error
+    raise RuntimeError(f"Timed out waiting for {host}:{port} to open. Last error: {last_err}")
 
 
 def serialise_array(array):
@@ -124,8 +135,20 @@ class VFLServer():
         # )
         self.optimizer = optim.Adam(self.model.parameters(), lr=DEFAULT_LEARNING_RATE, weight_decay=1e-4)  # optim.SGD(self.model.parameters(), lr=0.01)
         self.criterion = nn.MSELoss()
-        self.labels = torch.tensor(
-            data["REL_TOTALBTU"].values).float().unsqueeze(1)
+        # Had to change this, used to only work with REL_TOTALBTU
+        # Should be changed to work with any target column in the future, now just works with these two
+        if "REL_TOTALBTU" in data.columns:
+            label_col = "REL_TOTALBTU"
+        elif "Survived" in data.columns:
+            label_col = "Survived"
+        else:
+            raise ValueError(
+                f"Could not find a label column. Expected 'REL_TOTALBTU' or 'Survived'. "
+                f"Columns are: {list(data.columns)}"
+            )
+
+        self.labels = torch.tensor(data[label_col].to_numpy()).float().unsqueeze(1)
+        logger.info(f"Using label column: {label_col} (rows={self.labels.shape[0]})")
 
     def shrink_server_model(self, new_nof_clients, backtrack):
         """
@@ -314,16 +337,17 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication,
 
     DATA_STEWARD_NAME = os.getenv("DATA_STEWARD_NAME").lower()
 
+    # Made a distinction between server microservice running as actual server, or just as relay before client.
+    # I think this needs to change, might be an issue with the microservice chain.
     if DATA_STEWARD_NAME != "server":
         if request.type == "vflShutdownRequest":
-            logger.info(
-                "Received vflShutdownRequest, shutting down service.")
-            ms_config.next_client.ms_comm.send_data(msComm, msComm.data, {})
+            logger.info("Received vflShutdownRequest (relay mode), shutting down.")
+            ms_config.next_client.ms_comm.send_data(msComm, msComm.data, dict(msComm.metadata))
             signal_continuation(stop_event, stop_microservice_condition)
         else:
-            logger.info("This is the server (not client), relaying request.")
-            ms_config.next_client.ms_comm.send_data(msComm, msComm.data, {})
-
+            logger.info(f"Relay mode on {DATA_STEWARD_NAME}: forwarding request.")
+            ms_config.next_client.ms_comm.send_data(msComm, msComm.data, dict(msComm.metadata))
+        return Empty()
     else:
         if request.type == "vflAggregateRequest":
             logger.info("Received a vflAggregateRequest.")
@@ -345,8 +369,21 @@ def main():
     global ms_config
     global vfl_server
 
-    data = load_data(config.dataset_filepath)
-    vfl_server = VFLServer(data)
+    # Wait for sidecar to be up
+    sidecar_port = int(os.getenv("SIDECAR_PORT", "50051"))
+    logger.info(f"Waiting for sidecar gRPC on localhost:{sidecar_port} ...")
+    wait_for_port("127.0.0.1", sidecar_port, wait_time=90)
+
+    # Load data correctly if pod is server, otherwise do nothing
+    ds = os.getenv("DATA_STEWARD_NAME", "").lower()
+
+    if ds == "server":
+        data = load_data()
+        vfl_server = VFLServer(data)
+        logger.info("Initialized VFLServer (server mode)")
+    else:
+        vfl_server = None
+        logger.info(f"Not server ({ds}); running in relay mode (no dataset load)")
 
     ms_config = NewConfiguration(
         config.service_name, config.grpc_addr, request_handler)

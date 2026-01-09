@@ -31,7 +31,7 @@
     },
     {
         "name": "vflTrainModelRequest",
-        "requiredServices": ["vfl-train-model-demo", "vfl-train-demo"]
+        "requiredServices": ["vfl-train-model-demo", "anonymize-test", "vfl-train-demo"]
     },
     {
         "name": "vflTrainRequest",

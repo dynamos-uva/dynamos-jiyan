@@ -29,9 +29,12 @@ COPY ./data /app/data
 COPY ./*.py /app/$NAME
 COPY ./protofiles/*.py /app/protofiles
 
+COPY torch_requirements.txt .
 RUN if [ -f "torch_requirements.txt" ]; then \
   pip install -r torch_requirements.txt; \
 fi
+
+RUN pip install --no-cache-dir "protobuf==5.27.2"
 
 ENV  ENV="PROD"
 ENV PYTHONPATH="/app/protofiles"

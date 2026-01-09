@@ -113,5 +113,11 @@
     "label": "computeProvider",
     "allowedOutputs": [],
     "invalidArchetypes": []
+  },
+  {
+    "name": "anonymize-test",
+    "label": "computeProvider",
+    "allowedOutputs": [],
+    "invalidArchetypes": []
   }
 ]

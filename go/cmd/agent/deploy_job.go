@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sort"
 	"strings"
 
 	"github.com/Jorrit05/DYNAMOS/pkg/etcd"
@@ -15,6 +16,31 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// Necessary for port selection. Original DYNAMOS just does last port +1 i think, but this caused issues for me so i hardcoded it
+func sortMicroserviceChain(msChain []mschain.MicroserviceMetadata) {
+	priority := map[string]int{
+		"anonymize-test":   0,
+		"vfl-train-model":  1,
+		"vfl-train":        2,
+	}
+
+	sort.SliceStable(msChain, func(i, j int) bool {
+		a := strings.ToLower(msChain[i].Name)
+		b := strings.ToLower(msChain[j].Name)
+
+		pi, okI := priority[a]
+		pj, okJ := priority[b]
+
+		if okI && okJ {
+			return pi < pj
+		}
+		if okI != okJ {
+			return okI
+		}
+		return a < b
+	})
+}
 
 func jobExists(ctx context.Context, jobName string) bool {
 	// Check if job exists, if it does, do not make a new one
@@ -115,6 +141,16 @@ func deployJob(ctx context.Context, msChain []mschain.MicroserviceMetadata, jobN
 	if compositionRequest.DataProviders != nil {
 		nrOfDataProviders = len(compositionRequest.DataProviders)
 	}
+
+	// As mentioned before, first sort then loop over sorted chain
+	sortMicroserviceChain(msChain)
+	logger.Sugar().Infow("Sorted chain order", "chain", func() []string {
+		out := make([]string, 0, len(msChain))
+		for _, ms := range msChain {
+			out = append(out, ms.Name)
+		}
+		return out
+	}())
 
 	for i, microservice := range msChain {
 		port++
@@ -232,25 +268,44 @@ func getRequiredMicroservices(microserviceMetada *[]mschain.MicroserviceMetadata
 func getOptionalMicroservices(microserviceMetada *[]mschain.MicroserviceMetadata, request *mschain.RequestType, role string, requestType string, options map[string]bool) error {
 	logger.Debug("Start getOptionalMicroservices")
 	logger.Sugar().Debug(len(request.OptionalServices))
+	// Again made changes for sorting. Now always processes optional services in same order
+	optionKeys := make([]string, 0, len(options))
+	for k := range options {
+		optionKeys = append(optionKeys, k)
+	}
+	sort.Strings(optionKeys)
 
-	for option, boolVal := range options {
+	msNames := make([]string, 0, len(request.OptionalServices))
+	for msName := range request.OptionalServices {
+		msNames = append(msNames, msName)
+	}
+	sort.Strings(msNames)
+
+	for _, option := range optionKeys {
+		boolVal := options[option]
 		logger.Sugar().Debugf("Option: %s boolVal: %b", option, boolVal)
 
-		if boolVal {
-			for msName, optionKey := range request.OptionalServices {
-				if strings.EqualFold(option, optionKey) {
-					var metadataObject mschain.MicroserviceMetadata
+		if !boolVal {
+			continue
+		}
 
-					_, err := etcd.GetAndUnmarshalJSON(etcdClient, fmt.Sprintf("/microservices/%s/chainMetadata", msName), &metadataObject)
-					if err != nil {
-						return err
-					}
+		for _, msName := range msNames {
+			optionKey := request.OptionalServices[msName]
 
-					if strings.EqualFold(metadataObject.Label, role) {
-						*microserviceMetada = append(*microserviceMetada, metadataObject)
-					} else if strings.EqualFold("all", role) {
-						*microserviceMetada = append(*microserviceMetada, metadataObject)
-					}
+			if strings.EqualFold(option, optionKey) {
+				var metadataObject mschain.MicroserviceMetadata
+
+				_, err := etcd.GetAndUnmarshalJSON(
+					etcdClient,
+					fmt.Sprintf("/microservices/%s/chainMetadata", msName),
+					&metadataObject,
+				)
+				if err != nil {
+					return err
+				}
+
+				if strings.EqualFold(metadataObject.Label, role) || strings.EqualFold("all", role) {
+					*microserviceMetada = append(*microserviceMetada, metadataObject)
 				}
 			}
 		}

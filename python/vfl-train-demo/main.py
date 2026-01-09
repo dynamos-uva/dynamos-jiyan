@@ -5,6 +5,8 @@ import os
 import io
 import json
 import torch
+import time
+import socket
 import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
@@ -57,23 +59,44 @@ DEFAULT_WEIGHT_DECAY = 1e-4
 
 # --------------------------------
 
+# Took this function from other microservice.
+def protobuf_to_dataframe(data_struct: Struct, metadata: dict = None) -> pd.DataFrame:
+    if metadata is None:
+        metadata = {}
+    dtypes = metadata if isinstance(metadata, dict) else {}
 
-def load_data(file_path):
-    DATA_STEWARD_NAME = os.getenv("DATA_STEWARD_NAME").lower()
+    data = {}
+    for key, value in data_struct.fields.items():
+        value_list = value.list_value.values
+        items = [v.string_value for v in value_list]
 
-    file_name = f"{file_path}/{DATA_STEWARD_NAME}Data.csv"
+        dtype = str(dtypes.get(key, "object")).lower()
 
-    if DATA_STEWARD_NAME == "":
-        logger.error("DATA_STEWARD_NAME not set.")
-        file_name = f"{file_path}Data.csv"
+        if dtype.startswith("int"):
+            data[key] = [int(float(x)) if x != "" else 0 for x in items]
+        elif dtype.startswith("float"):
+            data[key] = [float(x) if x != "" else 0.0 for x in items]
+        elif dtype in ("bool", "boolean"):
+            data[key] = [str(x).strip().lower() in ("true", "1", "t", "yes") for x in items]
+        else:
+            data[key] = items
 
-    try:
-        data = pd.read_csv(file_name, delimiter=',')
-    except FileNotFoundError:
-        logger.error(f"CSV file for table {file_name} not found.")
-        return None
+    return pd.DataFrame(data)
 
-    return data
+# Was necessary in all microservices I used since services would try to connect to sidecar instantly, resulting in crash
+def wait_for_port(host, port, wait_time):
+    deadline = time.time() + wait_time
+    last_err = None
+    # While deadline has not passed keeps trying to connect to sidecar.
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=1):
+                return
+        except OSError as e:
+            last_err = e
+            time.sleep(1)
+    # If time is up raises error
+    raise RuntimeError(f"Timed out waiting for {host}:{port} to open. Last error: {last_err}")
 
 
 class ClientModel(nn.Module):
@@ -113,7 +136,7 @@ def deserialise_array(string, hook=None):
 
 class VFLClient():
     def __init__(self, data, learning_rate=DEFAULT_LEARNING_RATE, model_state=None, optimiser_state=None):
-        self.data = torch.tensor(data.values, dtype=torch.float32)
+        self.data = torch.tensor(data.to_numpy(dtype=np.float32), dtype=torch.float32)
         
         self.model = ClientModel(data.shape[1])
         if model_state is not None:
@@ -196,18 +219,66 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication,
         if request is not None:
             if request.type == "vflTrainRequest":
                 logger.info("Received a vflTrainRequest.")
+                global vfl_client
+                # Decode dataframe from msComm using metadata that was sent through
+                try:
+                    md = dict(msComm.metadata)
+                    df_meta_json = md.get("dataframe_metadata", "")
+                    if not df_meta_json:
+                        raise ValueError("Missing metadata. Anonymize issue likely")
+                    df_meta = json.loads(df_meta_json)
 
+                    df = protobuf_to_dataframe(msComm.data, df_meta)
+                    # Necessary for issues with test data
+                    if "Unnamed: 0" in df.columns:
+                        df = df.drop(columns=["Unnamed: 0"])
+                    for col in df.columns:
+                        if df[col].dtype == "object":
+                            lowered = df[col].astype(str).str.strip().str.lower()
+                            if lowered.isin(["true", "false"]).all():
+                                df[col] = lowered == "true"
+                            else:
+                                df[col] = pd.to_numeric(df[col], errors="coerce")
+                    df = df.fillna(0).astype(np.float32)
+                except Exception as e:
+                    logger.error(f"Failed to decode dataframe from msComm.data: {e}")
+                    data = Struct()
+                    ms_config.next_client.ms_comm.send_data(msComm, data, dict(msComm.metadata))
+                    return Empty()
+                try:
+                    # If round 1 create client and continue, otherwise compare to check for mismatch
+                    # Had mismatch issues earlier, just as a safeguard
+                    if vfl_client is None:
+                        logger.info("Initializing VFLClient from incoming dataframe.")
+                        vfl_client = VFLClient(df)
+                    else:
+                        if df.shape[1] != vfl_client.model.fc1.in_features:
+                            logger.warning(f"Feature count changed {vfl_client.model.fc1.in_features} -> {df.shape[1]}. Reinitializing client model.")
+                            vfl_client = VFLClient(df)
+                        else:
+                            vfl_client.data = torch.tensor(df.to_numpy(dtype=np.float32), dtype=torch.float32)
+                except Exception as e:
+                    logger.error(f"Failed initializing/updating VFLClient: {e}")
+                    data = Struct()
+                    ms_config.next_client.ms_comm.send_data(msComm, data, dict(msComm.metadata))
+                    return Empty()
                 try:
                     embeddings = vfl_client.train_model()
                     logger.debug(f"size of serialized array in bytes: {sys.getsizeof(embeddings)}")
                     data = Struct()
-                    data.update({"embeddings":  embeddings})
+                    data.update({"embeddings": embeddings})
                 except Exception as e:
-                    logger.error(f"Unexpected error: {e}")
+                    logger.error(f"Unexpected error during train_model: {e}")
                     data = Struct()
 
-                ms_config.next_client.ms_comm.send_data(msComm, data, {})
+                ms_config.next_client.ms_comm.send_data(msComm, data, dict(msComm.metadata))
+                return Empty()
             elif request.type == "vflGradientDescentRequest":
+                if vfl_client is None:
+                    logger.error("Received vflGradientDescentRequest before vflTrainRequest initialized vfl_client")
+                    data = Struct()
+                    ms_config.next_client.ms_comm.send_data(msComm, data, {})
+                    return Empty()
                 try:
                     learning_rate = request.data["learning_rate"].number_value
                     vfl_client.create_optimiser(learning_rate)
@@ -255,11 +326,17 @@ def main():
     global ms_config
     global vfl_client
 
-    try:
-        data = load_data(config.dataset_filepath)
-        vfl_client = VFLClient(data)
-    except Exception as e:
-        logger.error(f"Error occurred: {e}")
+    vfl_client = None
+    sidecar_port = int(os.getenv("SIDECAR_PORT", "50051"))
+    logger.info(f"Waiting for sidecar gRPC on localhost:{sidecar_port} ...")
+    wait_for_port("127.0.0.1", sidecar_port, wait_time=90)
+
+    port = int(os.getenv("DESIGNATED_GRPC_PORT", "0"))
+    last = int(os.getenv("LAST", "0"))
+    if last == 0 and port > 0:
+        next_port = port + 1
+        logger.info(f"Waiting for next gRPC service on localhost:{next_port} ...")
+        wait_for_port("127.0.0.1", next_port, wait_time=120)
 
     ms_config = NewConfiguration(
         config.service_name, config.grpc_addr, request_handler)
@@ -268,7 +345,6 @@ def main():
 
     try:
         signal_wait(stop_event, stop_microservice_condition)
-
     except KeyboardInterrupt:
         logger.debug("KeyboardInterrupt received, stopping server...")
         signal_continuation(stop_event, stop_microservice_condition)
@@ -276,6 +352,7 @@ def main():
     ms_config.stop(2)
     logger.debug(f"Exiting {config.service_name}")
     sys.exit(0)
+
 
 # ---  END DYNAMOS Interface code At the Bottom -----------------
 
