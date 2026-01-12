@@ -264,7 +264,6 @@ func runVFLTrainingRound(dataRequest map[string]any, clients map[string]string, 
 
 		go func(clientAuth string, ep string, body []byte) {
 			defer wg.Done()
-
 			responseData, err := sendData(ep, body)
 			if err != nil {
 				logger.Sugar().Errorf("Error sending data, %v", err)
@@ -480,9 +479,14 @@ func runVFLTraining(dataRequest map[string]any, authorizedProviders map[string]s
 	}
 
 	logger.Sugar().Info("Sending ping to start pods...")
-	dataRequest["type"] = "vflPingRequest"
 
-	dataRequestJson, err := json.Marshal(dataRequest)
+	pingReq := make(map[string]any, len(dataRequest)+1)
+	for k, v := range dataRequest {
+		pingReq[k] = v
+	}
+	pingReq["type"] = "vflPingRequest"
+
+	dataRequestJson, err := json.Marshal(pingReq)
 	if err != nil {
 		logger.Sugar().Errorf("Error marshalling combined data: %v", err)
 		return []byte{}
@@ -659,9 +663,9 @@ for auth, url := range authorizedProviders {
 			}
 
 			// maybe we can merge the above if into this one
-			if len(clients) != len(authorizedProviders) {
+			if len(clients) != len(msg.AuthorizedProviders) {
 				// add newly authorised clients that are not yet in the clients map
-				for auth_provider, url := range authorizedProviders {
+				for auth_provider, url := range msg.AuthorizedProviders {
 					if strings.ToLower(auth_provider) != "server" { // exclude server
 						if _, ok := msg.AuthorizedProviders[auth_provider]; ok {
 							if _, exists := clients[auth_provider]; !exists {
@@ -711,9 +715,13 @@ for auth, url := range authorizedProviders {
 	logger.Sugar().Info("Final accuracy achieved: ", finalAccuracy)
 	logger.Sugar().Info("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
 
-	dataRequest["type"] = "vflShutdownRequest"
+	shutdownReq := make(map[string]any, len(dataRequest)+1)
+	for k, v := range dataRequest {
+		shutdownReq[k] = v
+	}
+	shutdownReq["type"] = "vflShutdownRequest"
 
-	dataRequestJson, err = json.Marshal(dataRequest)
+	dataRequestJson, err = json.Marshal(shutdownReq)
 	if err != nil {
 		logger.Sugar().Errorf("Error marshalling combined data: %v", err)
 		return []byte{}

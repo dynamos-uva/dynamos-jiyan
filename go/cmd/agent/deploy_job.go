@@ -20,9 +20,10 @@ import (
 // Necessary for port selection. Original DYNAMOS just does last port +1 i think, but this caused issues for me so i hardcoded it
 func sortMicroserviceChain(msChain []mschain.MicroserviceMetadata) {
 	priority := map[string]int{
-		"anonymize-test":   0,
-		"vfl-train-model":  1,
-		"vfl-train":        2,
+		"anonymize-test":        0,
+		"differential-p-test":   1,
+		"vfl-train-model-demo":  2,
+		"vfl-train-demo":        3,
 	}
 
 	sort.SliceStable(msChain, func(i, j int) bool {
@@ -103,6 +104,14 @@ func deployJob(ctx context.Context, msChain []mschain.MicroserviceMetadata, jobN
 	podSpec := v1.PodSpec{
 		Containers:    []v1.Container{},
 		RestartPolicy: v1.RestartPolicyOnFailure,
+		Volumes: []v1.Volume{
+			{
+				Name: "shared-data",
+				VolumeSource: v1.VolumeSource{
+					EmptyDir: &v1.EmptyDirVolumeSource{},
+				},
+			},
+		},
 	}
 
 	// In local dev (single-node docker-desktop), do NOT pin NodeName to "clientone"/"server"/etc.
@@ -185,6 +194,13 @@ func deployJob(ctx context.Context, msChain []mschain.MicroserviceMetadata, jobN
 				{Name: "SIDECAR_PORT", Value: strconv.Itoa(firstPortMicroservice - 1)},
 				{Name: "OC_AGENT_HOST", Value: tracingHost},
 				{Name: "NR_OF_DATA_PROVIDERS", Value: strconv.Itoa(nrOfDataProviders)},
+				{Name: "ANON_DIR", Value: "/shared"},
+			},
+			VolumeMounts: []v1.VolumeMount{
+				{
+					Name:      "shared-data",
+            		MountPath: "/shared",
+				},
 			},
 		}
 

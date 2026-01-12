@@ -12,8 +12,8 @@ kubectl -n core exec "$RABBIT_POD" -c rabbitmq -- rabbitmqctl change_password no
 # Delete all pods to restart
 kubectl -n orchestrator delete pod -l app=orchestrator
 kubectl -n orchestrator delete pod -l app=policy-enforcer
-kubectl -n vu delete pod -l app=vu
-kubectl -n uva delete pod -l app=uva
+#kubectl -n vu delete pod -l app=vu
+#kubectl -n uva delete pod -l app=uva
 kubectl -n surf delete pod -l app=surf
 kubectl -n api-gateway delete pod -l app=api-gateway
 kubectl -n server delete pod -l app=server

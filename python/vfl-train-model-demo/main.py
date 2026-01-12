@@ -5,6 +5,8 @@ import os
 import json
 import socket
 import time
+import base64
+import hashlib
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -60,6 +62,10 @@ DEFAULT_LEARNING_RATE = 0.1
 DEFAULT_NOF_CLIENTS = 3  # TODO: make it dynamic 
 SERVER_CHECKPOINT_PATH = "server_checkpoint.pth"
 
+# Just for testing, mark so I can see if it works
+def fp(s):
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()[:8]
+
 # Changed the data loading to be hardcoded, old way was raising issues
 # Also raises an error instead of returning None now
 def load_data():
@@ -89,21 +95,20 @@ def wait_for_port(host, port, wait_time):
 
 
 def serialise_array(array):
-    return json.dumps([
-        str(array.dtype),
-        array.tobytes().decode("latin1"),
-        array.shape])
+    payload = {
+        "dtype": str(array.dtype),
+        "shape": list(array.shape),
+        "data": base64.b64encode(array.tobytes()).decode("ascii"),
+    }
+    return json.dumps(payload, separators=(",", ":"))
 
 
 def deserialise_array(string, hook=None):
-    encoded_data = json.loads(string, object_pairs_hook=hook)
-    dataType = np.dtype(encoded_data[0])
-    dataArray = np.frombuffer(encoded_data[1].encode("latin1"), dataType)
-
-    if len(encoded_data) > 2:
-        return dataArray.reshape(encoded_data[2])
-
-    return dataArray
+    obj = json.loads(string, object_pairs_hook=hook)
+    dtype = np.dtype(obj["dtype"])
+    raw = base64.b64decode(obj["data"].encode("ascii"))
+    arr = np.frombuffer(raw, dtype=dtype)
+    return arr.reshape(obj["shape"])
 
 
 class ServerModel(nn.Module):
@@ -301,19 +306,35 @@ def handleAggregateRequest(msComm):
             logger.debug(f"Training backtrack flag is 'True'")
     except Exception as e:
         logger.warning(f"Error when retrieving training backtrack flag: {e}")
+    embeddings_val = request.data.get("embeddings", None)
+    if embeddings_val is None and hasattr(msComm.data, "get"):
+        embeddings_val = msComm.data.get("embeddings", None)
+
+    if embeddings_val is None:
+        raise ValueError("No embeddings found in msComm.data or request.data for vflAggregateRequest")
+
+    serialized = [v.string_value for v in embeddings_val.list_value.values]
+
+    clients_embeddings = [deserialise_array(s) for s in serialized]
 
     try:
-        data = request.data["embeddings"]
-        # logger.debug(f"Received data: {data}")
-        # logger.debug(f"Embedding len: {len(data)}")
-        clients_embeddings = [deserialise_array(
-            embeddings.string_value) for embeddings in data.list_value.values]
+        md = dict(msComm.metadata)
+        dp_flag = md.get("dp_applied", "0")
+
+        e0 = clients_embeddings[0].astype(np.float32, copy=False)
+        e0_norm = float(np.linalg.norm(e0.ravel(), 2))
+        e0_fp = fp(serialized[0])
+
+        logger.info(
+            f"[SERVER] vflAggregateRequest received: dp_applied={dp_flag} "
+            f"n={len(clients_embeddings)} e0_norm={e0_norm:.6f} e0_fp={e0_fp}"
+        )
     except Exception as e:
-        logger.error(f"Errored when deserialising client data: {e}")
+        logger.warning(f"[SERVER] Could not log DP verification stats: {e}")
 
     data = vfl_server.aggregate_fit(clients_embeddings, backtrack)
 
-    ms_config.next_client.ms_comm.send_data(msComm, data, {})
+    ms_config.next_client.ms_comm.send_data(msComm, data, dict(msComm.metadata))
 
 
 # ---  DYNAMOS Interface code At the Bottom --------

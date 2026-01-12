@@ -2,15 +2,13 @@ import pandas as pd
 import numpy as np
 import sys
 import os
-import io
 import json
 import torch
 import time
+import base64
 import socket
 import torch.nn as nn
 import torch.nn.functional as F
-from collections import OrderedDict
-from sklearn.preprocessing import StandardScaler
 from google.protobuf.struct_pb2 import Struct
 from dynamos.ms_init import NewConfiguration
 from dynamos.signal_flow import signal_continuation, signal_wait
@@ -43,6 +41,8 @@ wait_for_setup_event = threading.Event()
 wait_for_setup_condition = threading.Condition()
 
 ms_config = None
+ANON_DIR = os.getenv("ANON_DIR", "/shared")
+DATA_CACHE = {}
 
 DEFAULT_LEARNING_RATE = 0.1 
 DEFAULT_WEIGHT_DECAY = 1e-4
@@ -59,29 +59,73 @@ DEFAULT_WEIGHT_DECAY = 1e-4
 
 # --------------------------------
 
-# Took this function from other microservice.
-def protobuf_to_dataframe(data_struct: Struct, metadata: dict = None) -> pd.DataFrame:
-    if metadata is None:
-        metadata = {}
-    dtypes = metadata if isinstance(metadata, dict) else {}
+# Uses metadata to load csv from shared volume
+def load_training_dataframe_from_metadata(md):
+    ds_name = os.getenv("DATA_STEWARD_NAME", "").lower()
 
-    data = {}
-    for key, value in data_struct.fields.items():
-        value_list = value.list_value.values
-        items = [v.string_value for v in value_list]
+    anon_path = md.get("anon_path")
 
-        dtype = str(dtypes.get(key, "object")).lower()
+    if not os.path.exists(anon_path):
+        raise FileNotFoundError(
+            f"Anonymized dataset not found. Tried: {anon_path}. "
+            f"Metadata keys: {list(md.keys())}"
+        )
 
-        if dtype.startswith("int"):
-            data[key] = [int(float(x)) if x != "" else 0 for x in items]
-        elif dtype.startswith("float"):
-            data[key] = [float(x) if x != "" else 0.0 for x in items]
-        elif dtype in ("bool", "boolean"):
-            data[key] = [str(x).strip().lower() in ("true", "1", "t", "yes") for x in items]
-        else:
-            data[key] = items
+    df = pd.read_csv(anon_path, delimiter=",")
+    logger.info(f"[{ds_name}] loaded training data from {anon_path} (rows={df.shape[0]}, cols={df.shape[1]})")
+    return df
 
-    return pd.DataFrame(data)
+# Helper to return path of anonymized data
+def resolve_anon_path_from_metadata(md):
+    ds_name = os.getenv("DATA_STEWARD_NAME", "").lower()
+
+    anon_path = md.get("anon_path")
+
+    if not anon_path:
+        meta_json = md.get("dataframe_metadata", "")
+        if meta_json:
+            try:
+                meta_obj = json.loads(meta_json)
+                anon_path = meta_obj.get("anon_path") or meta_obj.get("local_path")
+            except Exception:
+                pass
+
+    if not anon_path:
+        anon_path = os.path.join(ANON_DIR, f"{ds_name}Data_anonymized.csv")
+
+    return anon_path
+
+# If already loaded before, loads from cached, otherwise loads it
+def load_training_dataframe_cached(md):
+    ds_name = os.getenv("DATA_STEWARD_NAME", "").lower()
+    anon_path = resolve_anon_path_from_metadata(md)
+
+    cached = DATA_CACHE.get(anon_path)
+    if cached is not None:
+        df_cached, cols_cached = cached
+        logger.info(f"[{ds_name}] using cached training data from {anon_path} (rows={df_cached.shape[0]}, cols={df_cached.shape[1]})")
+        return df_cached, cols_cached, anon_path
+
+    df = load_training_dataframe_from_metadata(md)
+
+    if "Unnamed: 0" in df.columns:
+        df = df.drop(columns=["Unnamed: 0"])
+
+    for col in df.columns:
+        if df[col].dtype == "object":
+            lowered = df[col].astype(str).str.strip().str.lower()
+            if lowered.isin(["true", "false"]).all():
+                df[col] = (lowered == "true")
+            else:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df = df.fillna(0).astype(np.float32)
+    cols = df.columns.tolist()
+
+    DATA_CACHE[anon_path] = (df, cols)
+    logger.info(f"[{ds_name}] cached training data from {anon_path} (rows={df.shape[0]}, cols={df.shape[1]})")
+    return df, cols, anon_path
+
 
 # Was necessary in all microservices I used since services would try to connect to sidecar instantly, resulting in crash
 def wait_for_port(host, port, wait_time):
@@ -116,22 +160,28 @@ class ClientModel(nn.Module):
 
 
 def serialise_array(array):
-    return json.dumps([
-        str(array.dtype),
-        array.tobytes().decode("latin1"),
-        array.shape])
+    array = np.ascontiguousarray(array)
+    payload = {
+        "dtype": str(array.dtype),
+        "shape": list(array.shape),
+        "data": base64.b64encode(array.tobytes()).decode("ascii"),
+    }
+    return json.dumps(payload, separators=(",", ":"))
 
 
 def deserialise_array(string, hook=None):
-    encoded_data = json.loads(string, object_pairs_hook=hook)
-    logger.info(string, encoded_data)
-    dataType = np.dtype(encoded_data[0])
-    dataArray = np.frombuffer(encoded_data[1].encode("latin1"), dataType)
+    obj = json.loads(string, object_pairs_hook=hook)
+    if isinstance(obj, list):
+        dataType = np.dtype(obj[0])
+        dataArray = np.frombuffer(obj[1].encode("latin1"), dataType)
+        return dataArray.reshape(obj[2]) if len(obj) > 2 else dataArray
 
-    if len(encoded_data) > 2:
-        return dataArray.reshape(encoded_data[2])
+    dataType = np.dtype(obj["dtype"])
+    raw = base64.b64decode(obj["data"].encode("ascii"))
+    dataArray = np.frombuffer(raw, dataType)
+    shape = obj.get("shape")
+    return dataArray.reshape(shape) if shape is not None else dataArray
 
-    return dataArray
 
 
 class VFLClient():
@@ -220,28 +270,25 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication,
             if request.type == "vflTrainRequest":
                 logger.info("Received a vflTrainRequest.")
                 global vfl_client
-                # Decode dataframe from msComm using metadata that was sent through
                 try:
                     md = dict(msComm.metadata)
-                    df_meta_json = md.get("dataframe_metadata", "")
-                    if not df_meta_json:
-                        raise ValueError("Missing metadata. Anonymize issue likely")
-                    df_meta = json.loads(df_meta_json)
 
-                    df = protobuf_to_dataframe(msComm.data, df_meta)
-                    # Necessary for issues with test data
-                    if "Unnamed: 0" in df.columns:
-                        df = df.drop(columns=["Unnamed: 0"])
-                    for col in df.columns:
-                        if df[col].dtype == "object":
-                            lowered = df[col].astype(str).str.strip().str.lower()
-                            if lowered.isin(["true", "false"]).all():
-                                df[col] = lowered == "true"
-                            else:
-                                df[col] = pd.to_numeric(df[col], errors="coerce")
-                    df = df.fillna(0).astype(np.float32)
+                    df, current_cols, anon_path = load_training_dataframe_cached(md)
+
+                    logger.info(
+                        f"[{DATA_STEWARD_NAME}] training fingerprint: rows={df.shape[0]} cols={df.shape[1]} "
+                        f"first_col={current_cols[0] if len(current_cols) else 'NA'} anon_path={anon_path}"
+                    )
+                    if vfl_client is not None and hasattr(vfl_client, "columns"):
+                        if current_cols != vfl_client.columns:
+                            logger.warning(
+                                "Column order changed across rounds. "
+                                f"Reinitializing client model.\nOLD={vfl_client.columns}\nNEW={current_cols}"
+                            )
+                            vfl_client = None
+
                 except Exception as e:
-                    logger.error(f"Failed to decode dataframe from msComm.data: {e}")
+                    logger.error(f"Failed to load dataframe for training: {e}")
                     data = Struct()
                     ms_config.next_client.ms_comm.send_data(msComm, data, dict(msComm.metadata))
                     return Empty()
@@ -251,12 +298,14 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication,
                     if vfl_client is None:
                         logger.info("Initializing VFLClient from incoming dataframe.")
                         vfl_client = VFLClient(df)
+                        vfl_client.columns = current_cols
                     else:
                         if df.shape[1] != vfl_client.model.fc1.in_features:
                             logger.warning(f"Feature count changed {vfl_client.model.fc1.in_features} -> {df.shape[1]}. Reinitializing client model.")
                             vfl_client = VFLClient(df)
                         else:
                             vfl_client.data = torch.tensor(df.to_numpy(dtype=np.float32), dtype=torch.float32)
+                            vfl_client.columns = current_cols
                 except Exception as e:
                     logger.error(f"Failed initializing/updating VFLClient: {e}")
                     data = Struct()

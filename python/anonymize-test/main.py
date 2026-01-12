@@ -5,6 +5,7 @@ import sys
 import threading
 import socket
 import time
+import hashlib
 
 from dynamos.ms_init import NewConfiguration
 from dynamos.signal_flow import signal_continuation, signal_wait
@@ -28,6 +29,13 @@ wait_for_setup_event = threading.Event()
 wait_for_setup_condition = threading.Condition()
 
 ms_config = None
+ANON_DIR = "/shared"
+ANON_LOCK = threading.Lock()
+
+# right now does nothing, can later be used to apply anonymization
+def apply_anonymization(df, ds_name):
+    return df
+
 
 # Was necessary in all microservices I used since services would try to connect to sidecar instantly, resulting in crash
 def wait_for_port(host, port, wait_time):
@@ -44,33 +52,6 @@ def wait_for_port(host, port, wait_time):
     # If time is up raises error
     raise RuntimeError(f"Timed out waiting for {host}:{port} to open. Last error: {last_err}")
 
-
-# i took this from one of the existing microservices
-def dataframe_to_protobuf(df):
-    # Convert the DataFrame to a dictionary of lists (one for each column)
-    data_dict = df.to_dict(orient='list')
-
-    # Convert the dictionary to a Struct
-    data_struct = Struct()
-
-    # Iterate over the dictionary and add each value to the Struct
-    for key, values in data_dict.items():
-        # Pack each item of the list into a Value object
-        value_list = [Value(string_value=str(item)) for item in values]
-        # Pack these Value objects into a ListValue
-        list_value = ListValue(values=value_list)
-        # Add the ListValue to the Struct
-        data_struct.fields[key].CopyFrom(Value(list_value=list_value))
-
-    # Create the metadata
-    # Infer the data types of each column
-    data_types = df.dtypes.apply(lambda x: x.name).to_dict()
-    # Convert the data types to string values
-    metadata = {k: str(v) for k, v in data_types.items()}
-
-    return data_struct, metadata
-
-# this function as well
 def register_service_on_metadata(metadata:dict, service_name:str) -> dict:
     """
     Adds a JSON encoded list of the services that took place on the field "services".
@@ -84,6 +65,74 @@ def register_service_on_metadata(metadata:dict, service_name:str) -> dict:
     metadata["services"] = json.dumps([service_name])
 
     return metadata
+
+def dataset_cache_key(df, ds_name):
+    payload = json.dumps({
+        "ds": ds_name,
+        "shape": [int(df.shape[0]), int(df.shape[1])],
+        "columns": df.columns.tolist(),
+        "dtypes": [str(x) for x in df.dtypes.tolist()],
+    }, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()[:16]
+
+# Saves anonymized dataset to correct directory
+def save_anonymized_dataset(df, ds_name, cache_key):
+    out_csv = os.path.join(ANON_DIR, f"{ds_name}Data_anonymized.csv")
+    marker = os.path.join(ANON_DIR, f"{ds_name}.anonymized.ok")
+
+    # To prevent partially written csv in case of errors.
+    tmp = out_csv + ".tmp"
+    df.to_csv(tmp, index=False)
+    os.replace(tmp, out_csv)
+
+    with open(marker, "w", encoding="utf-8") as f:
+        f.write(json.dumps({
+            "ds": ds_name,
+            "cache_key": cache_key,
+            "rows": int(df.shape[0]),
+            "cols": int(df.shape[1]),
+            "ts": time.time(),
+        }) + "\n")
+
+    return out_csv, marker
+
+def try_read_marker(marker_path):
+    try:
+        with open(marker_path, "r", encoding="utf-8") as f:
+            line = f.readline().strip()
+        return json.loads(line) if line else None
+    except Exception:
+        return None
+
+# Validates anonymized file and cached marker
+def anon_is_valid(anon_path, marker_path, expected_cache_key, expected_rows, expected_cols):
+    # Checks if anon file/marker exist
+    if not (os.path.exists(anon_path) and os.path.exists(marker_path)):
+        return False, "missing_file"
+
+    # Checks if marker is readable json
+    marker = try_read_marker(marker_path)
+    if not marker:
+        return False, "bad_marker"
+
+    # Checks is key matches expected key of dataset
+    if marker.get("cache_key") != expected_cache_key:
+        return False, "cache_key_changed"
+
+    # Checks if rows/columns match
+    if int(marker.get("rows", -1)) != int(expected_rows):
+        return False, "rows_mismatch"
+
+    if int(marker.get("cols", -1)) != int(expected_cols):
+        return False, "cols_mismatch"
+
+    try:
+        if os.path.getsize(anon_path) <= 0:
+            return False, "empty_file"
+    except Exception:
+        return False, "stat_failed"
+
+    return True, "ok"
 
 # Loads whichever dataset is necessary based on name
 # I.e. clientone loads clientoneData.csv
@@ -112,8 +161,9 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx=None):
         ms_config.next_client.ms_comm.send_data(msComm, msComm.data, dict(msComm.metadata))
         return Empty()
 
+    # Grabs temp pod name
     ds_name = os.getenv("DATA_STEWARD_NAME", "").lower()
-    
+
     # If server, do nothing.
     # Otherwise load data and continue
     if ds_name == "server":
@@ -127,24 +177,60 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx=None):
         ms_config.next_client.ms_comm.send_data(msComm, msComm.data, dict(msComm.metadata))
         return Empty()
 
-    # Pretty much all this ms does for now, just for testing. Logs head of df.
-    logger.info(f"[{ds_name}] dataset head(10):\n{df.head(10).to_string(index=False)}")
+    logger.info(f"[{ds_name}] dataset loaded")
 
-    data_pb, df_meta = dataframe_to_protobuf(df)
+    cache_key = dataset_cache_key(df, ds_name)
+    
+    # Builds paths for anon file/marker
+    anon_path = os.path.join(ANON_DIR, f"{ds_name}Data_anonymized.csv")
+    marker_path = os.path.join(ANON_DIR, f"{ds_name}.anonymized.ok")
+
+    # Checks if anon file exists and can be reused, otherwise regenerates and logs
+    with ANON_LOCK:
+        is_valid, reason = anon_is_valid(
+            anon_path=anon_path,
+            marker_path=marker_path,
+            expected_cache_key=cache_key,
+            expected_rows=df.shape[0],
+            expected_cols=df.shape[1],
+        )
+
+        if is_valid:
+            logger.info(f"[{ds_name}] reusing anonymized dataset: {anon_path}")
+        else:
+            df_anon = apply_anonymization(df,ds_name)
+            anon_path, marker_path = save_anonymized_dataset(df_anon, ds_name, cache_key)
+            logger.info(f"[{ds_name}] created anonymized dataset: {anon_path}")
+            logger.info(f"[{ds_name}] wrote marker: {marker_path}")
+
+    # Builds metadata payload as python dict
+    df_meta = {
+        "columns": df.columns.tolist(),
+        "dtypes": {k: str(v) for k, v in df.dtypes.apply(lambda x: x.name).to_dict().items()},
+        "rows": int(df.shape[0]),
+        "cols": int(df.shape[1]),
+        "source": "anonymize-test",
+        "cache_key": cache_key,
+        "anon_dir": ANON_DIR,
+        "anon_path": anon_path,
+        "marker_path": marker_path}
+
+    logger.info(f"[{ds_name}] anonymized ready: {anon_path} (rows={df.shape[0]}, cols={df.shape[1]})")
 
     md = dict(msComm.metadata)
     md = register_service_on_metadata(md, service_name=config.service_name)
     md["dataframe_metadata"] = json.dumps(df_meta)
+    md["anon_path"] = anon_path
+    md["anon_cache_key"] = cache_key
 
-    ms_config.next_client.ms_comm.send_data(msComm, data_pb, md)
+    ms_config.next_client.ms_comm.send_data(msComm, Struct(), md)
     return Empty()
-
 
 def main():
     global ms_config
 
     sidecar_port = int(os.getenv("SIDECAR_PORT", "50051"))
-    logger.info(f"Waiting for sidecar gRPC on localhost:{sidecar_port} ...")
+    logger.info(f"Waiting for sidecar {sidecar_port}")
     wait_for_port("127.0.0.1", sidecar_port, wait_time=90)
 
     ms_config = NewConfiguration(
