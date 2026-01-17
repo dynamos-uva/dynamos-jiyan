@@ -118,6 +118,7 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx: Context 
     clip_norm = 3000.0
     noise_enabled = True 
     base_seed = 12345
+    dp_enabled = True
 
     cid = getattr(msComm.request_metadata, "correlation_id", "")
     if cid:
@@ -128,6 +129,12 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx: Context 
 
     if request.type == "vflAggregateRequest":
         try:
+            if dp_enabled == False:
+                md = dict(msComm.metadata)
+                md["dp_applied"] = "0"
+                md["dp_enabled"] = "0"
+                ms_config.next_client.ms_comm.send_data(msComm, msComm.data, md)
+                return Empty()
             embeddings_val = request.data.get("embeddings", None)
             if embeddings_val is None:
                 logger.warning("vflAggregateRequest had no embeddings in request.data")

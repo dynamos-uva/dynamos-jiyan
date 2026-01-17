@@ -269,7 +269,7 @@ class VFLServer():
         # data = []
         # data.append({"r2": r2_score, "gradients": np_gradients})
 
-        logger.info(f"R2 achieved: {r2_score}")
+        logger.info(f"R2 achieved: {r2_score}, MAE achieved: {mae}, RMSE achieved: {rmse}, MSE achieved {mse}")
 
         return data
     

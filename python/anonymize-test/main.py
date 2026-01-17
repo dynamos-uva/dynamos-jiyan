@@ -6,6 +6,7 @@ import threading
 import socket
 import time
 import hashlib
+import numpy as np
 
 from dynamos.ms_init import NewConfiguration
 from dynamos.signal_flow import signal_continuation, signal_wait
@@ -32,9 +33,27 @@ ms_config = None
 ANON_DIR = "/shared"
 ANON_LOCK = threading.Lock()
 
-# right now does nothing, can later be used to apply anonymization
+# Anonymizes first 1 column, converts hash into float, necessary for later type checks.
 def apply_anonymization(df, ds_name):
-    return df
+    enable_anon = True
+    df_anon = df.copy()
+    salt = "salt_aaa_ooo_iii"
+    cols = list(df_anon.columns[:1])
+    logger.info(f"Anonymizing columns: {cols}")
+
+    def hash_to_float(val, col):
+        val_str = str(val)
+        msg = f"{salt}|{ds_name}|{col}|{val_str}".encode("utf-8")
+        digest = hashlib.sha256(msg).digest()
+        u64 = int.from_bytes(digest[:8], byteorder="big", signed=False)
+        return np.float32(u64 / 2**64)
+    
+    if enable_anon == True:
+        for c in cols:
+            df_anon[c] = df_anon[c].map(lambda v, _c=c: hash_to_float(v, _c))
+        return df_anon
+    else:
+        return df
 
 
 # Was necessary in all microservices I used since services would try to connect to sidecar instantly, resulting in crash
