@@ -86,7 +86,7 @@ def gaussian_sigma(epsilon, delta, sensitivity):
     return sensitivity * np.sqrt(2.0 * np.log(1.25 / delta)) / epsilon
 
 # Applies the clipping + noise
-def dp_sanitize_embedding(serialized, clip_norm, epsilon, delta, seed, noise_enabled = True):
+def dp_clip_noise_embedding(serialized, clip_norm, epsilon, delta, seed, noise_enabled = True):
     # Deserializes embeddings
     arr = deserialise_array(serialized).astype(np.float32, copy=False)
 
@@ -120,12 +120,11 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx: Context 
     base_seed = 12345
     dp_enabled = True
 
-    cid = getattr(msComm.request_metadata, "correlation_id", "")
-    if cid:
-        derived = int(hashlib.sha256(cid.encode("utf-8")).hexdigest()[:8], 16)
-        seed = (base_seed ^ derived) & 0xFFFFFFFF
-    else:
-        seed = base_seed & 0xFFFFFFFF
+    #cid = getattr(msComm.request_metadata, "correlation_id", "")
+    #derived = int(hashlib.sha256(cid.encode("utf-8")).hexdigest()[:8], 16)
+    #seed = (base_seed ^ derived) & 0xFFFFFFFF
+
+    seed = base_seed & 0xFFFFFFFF
 
     if request.type == "vflAggregateRequest":
         try:
@@ -143,7 +142,7 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx: Context 
 
             embeddings_in = [v.string_value for v in embeddings_val.list_value.values]
             embeddings_out = [
-                dp_sanitize_embedding(e, clip_norm=clip_norm, epsilon=epsilon, delta=delta, seed=None if seed is None else (seed + i) & 0xFFFFFFFF, noise_enabled=noise_enabled)
+                dp_clip_noise_embedding(e, clip_norm=clip_norm, epsilon=epsilon, delta=delta, seed=None if seed is None else (seed + i) & 0xFFFFFFFF, noise_enabled=noise_enabled)
                 for i, e in enumerate(embeddings_in)
             ]
 
@@ -166,7 +165,7 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx: Context 
             return Empty()
 
         except Exception as e:
-            logger.error(f"DP failed; forwarding unchanged. Error: {e}")
+            logger.error(f"DP failed with error: {e}")
             ms_config.next_client.ms_comm.send_data(msComm, msComm.data, dict(msComm.metadata))
             return Empty()
 

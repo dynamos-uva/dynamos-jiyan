@@ -85,73 +85,15 @@ def register_service_on_metadata(metadata:dict, service_name:str) -> dict:
 
     return metadata
 
-def dataset_cache_key(df, ds_name):
-    payload = json.dumps({
-        "ds": ds_name,
-        "shape": [int(df.shape[0]), int(df.shape[1])],
-        "columns": df.columns.tolist(),
-        "dtypes": [str(x) for x in df.dtypes.tolist()],
-    }, sort_keys=True).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()[:16]
-
 # Saves anonymized dataset to correct directory
-def save_anonymized_dataset(df, ds_name, cache_key):
+def save_anonymized_dataset(df, ds_name):
     out_csv = os.path.join(ANON_DIR, f"{ds_name}Data_anonymized.csv")
-    marker = os.path.join(ANON_DIR, f"{ds_name}.anonymized.ok")
 
-    # To prevent partially written csv in case of errors.
     tmp = out_csv + ".tmp"
     df.to_csv(tmp, index=False)
     os.replace(tmp, out_csv)
 
-    with open(marker, "w", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "ds": ds_name,
-            "cache_key": cache_key,
-            "rows": int(df.shape[0]),
-            "cols": int(df.shape[1]),
-            "ts": time.time(),
-        }) + "\n")
-
-    return out_csv, marker
-
-def try_read_marker(marker_path):
-    try:
-        with open(marker_path, "r", encoding="utf-8") as f:
-            line = f.readline().strip()
-        return json.loads(line) if line else None
-    except Exception:
-        return None
-
-# Validates anonymized file and cached marker
-def anon_is_valid(anon_path, marker_path, expected_cache_key, expected_rows, expected_cols):
-    # Checks if anon file/marker exist
-    if not (os.path.exists(anon_path) and os.path.exists(marker_path)):
-        return False, "missing_file"
-
-    # Checks if marker is readable json
-    marker = try_read_marker(marker_path)
-    if not marker:
-        return False, "bad_marker"
-
-    # Checks is key matches expected key of dataset
-    if marker.get("cache_key") != expected_cache_key:
-        return False, "cache_key_changed"
-
-    # Checks if rows/columns match
-    if int(marker.get("rows", -1)) != int(expected_rows):
-        return False, "rows_mismatch"
-
-    if int(marker.get("cols", -1)) != int(expected_cols):
-        return False, "cols_mismatch"
-
-    try:
-        if os.path.getsize(anon_path) <= 0:
-            return False, "empty_file"
-    except Exception:
-        return False, "stat_failed"
-
-    return True, "ok"
+    return out_csv
 
 # Loads whichever dataset is necessary based on name
 # I.e. clientone loads clientoneData.csv
@@ -198,29 +140,17 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx=None):
 
     logger.info(f"[{ds_name}] dataset loaded")
 
-    cache_key = dataset_cache_key(df, ds_name)
-    
-    # Builds paths for anon file/marker
     anon_path = os.path.join(ANON_DIR, f"{ds_name}Data_anonymized.csv")
-    marker_path = os.path.join(ANON_DIR, f"{ds_name}.anonymized.ok")
+
 
     # Checks if anon file exists and can be reused, otherwise regenerates and logs
     with ANON_LOCK:
-        is_valid, reason = anon_is_valid(
-            anon_path=anon_path,
-            marker_path=marker_path,
-            expected_cache_key=cache_key,
-            expected_rows=df.shape[0],
-            expected_cols=df.shape[1],
-        )
-
-        if is_valid:
-            logger.info(f"[{ds_name}] reusing anonymized dataset: {anon_path}")
+        if os.path.exists(anon_path) and os.path.getsize(anon_path) > 0:
+            logger.info(f"Reusing anonymized dataset: {anon_path}")
         else:
-            df_anon = apply_anonymization(df,ds_name)
-            anon_path, marker_path = save_anonymized_dataset(df_anon, ds_name, cache_key)
-            logger.info(f"[{ds_name}] created anonymized dataset: {anon_path}")
-            logger.info(f"[{ds_name}] wrote marker: {marker_path}")
+            df_anon = apply_anonymization(df, ds_name)
+            anon_path = save_anonymized_dataset(df_anon, ds_name)
+            logger.info(f"Created anonymized dataset: {anon_path}")
 
     # Builds metadata payload as python dict
     df_meta = {
@@ -229,10 +159,8 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx=None):
         "rows": int(df.shape[0]),
         "cols": int(df.shape[1]),
         "source": "anonymize-test",
-        "cache_key": cache_key,
         "anon_dir": ANON_DIR,
-        "anon_path": anon_path,
-        "marker_path": marker_path}
+        "anon_path": anon_path}
 
     logger.info(f"[{ds_name}] anonymized ready: {anon_path} (rows={df.shape[0]}, cols={df.shape[1]})")
 
@@ -240,7 +168,6 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication, ctx=None):
     md = register_service_on_metadata(md, service_name=config.service_name)
     md["dataframe_metadata"] = json.dumps(df_meta)
     md["anon_path"] = anon_path
-    md["anon_cache_key"] = cache_key
 
     ms_config.next_client.ms_comm.send_data(msComm, Struct(), md)
     return Empty()

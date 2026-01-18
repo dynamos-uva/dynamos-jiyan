@@ -65,14 +65,8 @@ def load_training_dataframe_from_metadata(md):
 
     anon_path = md.get("anon_path")
 
-    if not os.path.exists(anon_path):
-        raise FileNotFoundError(
-            f"Anonymized dataset not found. Tried: {anon_path}. "
-            f"Metadata keys: {list(md.keys())}"
-        )
-
     df = pd.read_csv(anon_path, delimiter=",")
-    logger.info(f"[{ds_name}] loaded training data from {anon_path} (rows={df.shape[0]}, cols={df.shape[1]})")
+    logger.info(f"Loaded training data from {anon_path} (rows={df.shape[0]}, cols={df.shape[1]})")
     return df
 
 # Helper to return path of anonymized data
@@ -103,7 +97,6 @@ def load_training_dataframe_cached(md):
     cached = DATA_CACHE.get(anon_path)
     if cached is not None:
         df_cached, cols_cached = cached
-        logger.info(f"[{ds_name}] using cached training data from {anon_path} (rows={df_cached.shape[0]}, cols={df_cached.shape[1]})")
         return df_cached, cols_cached, anon_path
 
     df = load_training_dataframe_from_metadata(md)
@@ -123,7 +116,6 @@ def load_training_dataframe_cached(md):
     cols = df.columns.tolist()
 
     DATA_CACHE[anon_path] = (df, cols)
-    logger.info(f"[{ds_name}] cached training data from {anon_path} (rows={df.shape[0]}, cols={df.shape[1]})")
     return df, cols, anon_path
 
 
@@ -274,11 +266,6 @@ def request_handler(msComm: msCommTypes.MicroserviceCommunication,
                     md = dict(msComm.metadata)
 
                     df, current_cols, anon_path = load_training_dataframe_cached(md)
-
-                    logger.info(
-                        f"[{DATA_STEWARD_NAME}] training fingerprint: rows={df.shape[0]} cols={df.shape[1]} "
-                        f"first_col={current_cols[0] if len(current_cols) else 'NA'} anon_path={anon_path}"
-                    )
                     if vfl_client is not None and hasattr(vfl_client, "columns"):
                         if current_cols != vfl_client.columns:
                             logger.warning(
