@@ -35,6 +35,9 @@ type TrainingRequestData struct {
 	Results  []map[string]any
 	Metadata map[string]any
 	// add more fields as needed
+	StartTime time.Time
+	EndTime time.Time
+	Duration int64
 }
 
 
@@ -406,6 +409,7 @@ func runVFLTrainingRound(dataRequest map[string]any, clients map[string]string, 
 }
 
 func runVFLTraining(dataRequest map[string]any, authorizedProviders map[string]string, jobId string, ctx context.Context, requestID string) []byte {
+	start := time.Now()
 	clients := map[string]string{}
 	var serverUrl string
 	var serverAuth string
@@ -740,9 +744,15 @@ for auth, url := range authorizedProviders {
 
 	wg.Wait()
 
+	end := time.Now()
+	durationMs := end.Sub(start).Milliseconds()
+
 	response := map[string]any{
 		"jobId":    jobId,
 		"accuracy": finalAccuracy,
+		"start time": start.UTC().Format(time.RFC3339Nano),
+		"end tine": end.UTC().Format(time.RFC3339Nano),
+		"duration seconds": float64(durationMs) / 1000.0,
 	}
 
 	logger.Sugar().Info("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-")
