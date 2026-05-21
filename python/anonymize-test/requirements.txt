@@ -1,0 +1,5 @@
+pandas>=2.2.2
+scikit-learn>=1.6.1
+dynamos>=0.1
+opentelemetry-api>=1.19.0
+opentelemetry-instrumentation>=0.40b0

@@ -1,3 +1,6 @@
+//go:build !local
+// +build !local
+
 package main
 
 import (
@@ -18,14 +21,6 @@ func isJobWaiting(ctx context.Context, msComm *pb.MicroserviceCommunication, cor
 	waitingJobMutex.Lock()
 	waitingJob, ok := waitingJobMap[correlationId]
 	waitingJobMutex.Unlock()
-
-	// Add additional trace attributes for debugging
-	span.AddAttributes(trace.StringAttribute("correlationId", correlationId), trace.BoolAttribute("jobFound", ok))
-	// Add waiting job attributes only if it is not nil
-	if ok && waitingJob != nil {
-		span.AddAttributes(trace.Int64Attribute("nrOfDataStewards", int64(waitingJob.nrOfDataStewards)))
-	}
-	logger.Sugar().Debugf("isJobWaiting: correlationId=%s, jobFound=%t, nrOfDataStewards=%v, mapContent=%v", correlationId, ok, waitingJob, waitingJobMap)
 
 	if ok && waitingJob.nrOfDataStewards > 0 {
 		logger.Sugar().Infof("Nr. of stewards: %d", waitingJob.nrOfDataStewards)
@@ -52,11 +47,8 @@ func isHttpWaiting(ctx context.Context, msComm *pb.MicroserviceCommunication, co
 	mutex.Lock()
 	// Look up the corresponding channel in the request map
 	dataResponseChan, ok := responseMap[correlationId]
+	logger.Sugar().Info("Response map: ", responseMap)
 	mutex.Unlock()
-
-	// Add additional trace attributes for debugging
-	span.AddAttributes(trace.StringAttribute("correlationId", correlationId), trace.BoolAttribute("httpChannelFound", ok))
-	logger.Sugar().Debugf("isHttpWaiting: correlationId=%s, httpChannelFound=%t, mapContent=%v", correlationId, ok, responseMap)
 
 	if ok {
 		logger.Sugar().Info("Sending requestData to channel")
@@ -64,6 +56,7 @@ func isHttpWaiting(ctx context.Context, msComm *pb.MicroserviceCommunication, co
 		// Send a signal on the channel to indicate that the response is ready
 		dataResponseChan <- dataResponse{response: msComm, localContext: ctx}
 
+		// TODO: Test if this is making things stop
 		mutex.Lock()
 		delete(responseMap, correlationId)
 		mutex.Unlock()
@@ -85,10 +78,6 @@ func isThirdPartyWaiting(ctx context.Context, msComm *pb.MicroserviceCommunicati
 	ttpMutex.Lock()
 	returnAddress, ok := thirdPartyMap[correlationId]
 	ttpMutex.Unlock()
-
-	// Add additional trace attributes for debugging
-	span.AddAttributes(trace.StringAttribute("correlationId", correlationId), trace.BoolAttribute("thirdPartyFound", ok))
-	logger.Sugar().Debugf("isThirdPartyWaiting: correlationId=%s, thirdPartyFound=%t, mapContent=%v", correlationId, ok, thirdPartyMap)
 
 	if ok {
 		logger.Sugar().Infof("Sending sql response to returnAddress: %s", returnAddress)

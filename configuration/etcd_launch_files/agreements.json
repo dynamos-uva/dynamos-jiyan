@@ -62,7 +62,154 @@
         ]
     },
     {
+        "name": "PRETS",
+        "relations": {
+            "jorrit.stutterheim@cloudnation.nl": {
+                "ID": "GUID",
+                "requestTypes": [
+                    "sqlDataRequest",
+                    "genericRequest",
+                    "dummyRequest"
+                ],
+                "dataSets": [
+                    "wageGap"
+                ],
+                "allowedArchetypes": [
+                    "computeToData",
+                    "dataThroughTtp"
+                ],
+                "allowedComputeProviders": [
+                    "SURF"
+                ]
+            }
+        },
+        "computeProviders": [
+            "SURF",
+            "otherCompany"
+        ],
+        "archetypes": [
+            "computeToData",
+            "dataThroughTtp",
+            "reproducableScience"
+        ]
+    },
+    {
+        "name": "PRETS",
+        "relations": {
+            "alex@uva.nl": {
+                "ID": "GUID",
+                "requestTypes": [
+                    "sqlDataRequest",
+                    "genericRequest",
+                    "dummyRequest"
+                ],
+                "dataSets": [
+                    "wageGap"
+                ],
+                "allowedArchetypes": [
+                    "computeToData",
+                    "dataThroughTtp"
+                ],
+                "allowedComputeProviders": [
+                    "SURF"
+                ]
+            }
+        },
+        "computeProviders": [
+            "SURF",
+            "otherCompany"
+        ],
+        "archetypes": [
+            "computeToData",
+            "dataThroughTtp",
+            "reproducableScience"
+        ]
+    },
+    {
+        "name": "PRETS",
+        "relations": {
+            "alex@uva.nl": {
+                "ID": "GUID",
+                "requestTypes": [
+                    "sqlDataRequest",
+                    "genericRequest"
+                ],
+                "dataSets": [
+                    "wageGap"
+                ],
+                "allowedArchetypes": [
+                    "computeToData",
+                    "dataThroughTtp"
+                ],
+                "allowedComputeProviders": [
+                    "SURF"
+                ]
+            }
+        },
+        "computeProviders": [
+            "SURF",
+            "otherCompany"
+        ],
+        "archetypes": [
+            "computeToData",
+            "dataThroughTtp",
+            "reproducableScience"
+        ]
+    },
+    {
         "name": "RUG",
         "relations": {}
+    },
+    {
+        "name": "server",
+        "relations": {
+        "jake.jongejans@student.uva.nl": {
+            "ID": "GUID",
+            "requestTypes": ["vflTrainModelRequest"],
+            "allowedArchetypes": ["computeToData"],
+            "allowedComputeProviders": ["server"]
+        }
+        },
+        "computeProviders": ["server"],
+        "archetypes": ["computeToData"]
+    },
+    {
+        "name": "clientone",
+        "relations": {
+        "jake.jongejans@student.uva.nl": {
+            "ID": "GUID",
+            "requestTypes": ["vflTrainRequest"],
+            "allowedArchetypes": ["computeToData"],
+            "allowedComputeProviders": ["clientone"]
+        }
+        },
+        "computeProviders": ["clientone"],
+        "archetypes": ["computeToData"]
+    },
+    {
+        "name": "clienttwo",
+        "relations": {
+        "jake.jongejans@student.uva.nl": {
+            "ID": "GUID",
+            "requestTypes": ["vflTrainRequest"],
+            "allowedArchetypes": ["computeToData"],
+            "allowedComputeProviders": ["clienttwo"]
+        }
+        },
+        "computeProviders": ["clienttwo"],
+        "archetypes": ["computeToData"]
+    },
+    {
+        "name": "clientthree",
+        "relations": {
+        "jake.jongejans@student.uva.nl": {
+            "ID": "GUID",
+            "requestTypes": ["vflTrainRequest"],
+            "allowedArchetypes": ["computeToData"],
+            "allowedComputeProviders": ["clientthree"]
+        }
+        },
+        "computeProviders": ["clientthree"],
+        "archetypes": ["computeToData"]
     }
 ]

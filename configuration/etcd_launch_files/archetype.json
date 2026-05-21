@@ -10,5 +10,23 @@
         "computeProvider": "other",
         "resultRecipient": "requestor",
         "weight": 200
+    },
+    {
+        "name": "dummyRequest",
+        "computeProvider": "dataProvider",
+        "resultRecipient": "requestor",
+        "weight": 90
+    },
+    {
+        "name": "mlRequest",
+        "computeProvider": "dataProvider", 
+        "resultRecipient": "requestor",
+        "weight": 80
+    },
+    {
+        "name": "trainThroughClients",
+        "computeProvider": "other",
+        "resultRecipient": "requestor",
+        "weight": 50
     }
 ]

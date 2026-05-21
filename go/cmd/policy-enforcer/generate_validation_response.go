@@ -111,5 +111,13 @@ func getValidAgreements(dataProviders []string, requestUser *pb.User, agreements
 
 	}
 
+	// Log valid and invalid stewards
+	var validStewards []string
+	for steward := range protoRequest.ValidDataproviders {
+		validStewards = append(validStewards, steward)
+	}
+	logger.Sugar().Debug("Valid stewards: ", validStewards)
+	logger.Sugar().Debug("Invalid stewards: ", invalidDataproviders)
+
 	protoRequest.InvalidDataproviders = invalidDataproviders
 }

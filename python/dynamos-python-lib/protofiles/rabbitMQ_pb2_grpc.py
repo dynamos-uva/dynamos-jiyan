@@ -57,9 +57,9 @@ class RabbitMQStub(object):
                 request_serializer=rabbitMQ__pb2.CompositionRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
-        self.SendSqlDataRequest = channel.unary_unary(
-                '/dynamos.RabbitMQ/SendSqlDataRequest',
-                request_serializer=rabbitMQ__pb2.SqlDataRequest.SerializeToString,
+        self.SendRequest = channel.unary_unary(
+                '/dynamos.RabbitMQ/SendRequest',
+                request_serializer=rabbitMQ__pb2.Request.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
         self.SendPolicyUpdate = channel.unary_unary(
@@ -69,7 +69,7 @@ class RabbitMQStub(object):
                 )
         self.SendTest = channel.unary_unary(
                 '/dynamos.RabbitMQ/SendTest',
-                request_serializer=rabbitMQ__pb2.SqlDataRequest.SerializeToString,
+                request_serializer=rabbitMQ__pb2.Request.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 )
         self.SendMicroserviceComm = channel.unary_unary(
@@ -151,7 +151,7 @@ class RabbitMQServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def SendSqlDataRequest(self, request, context):
+    def SendRequest(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -242,9 +242,9 @@ def add_RabbitMQServicer_to_server(servicer, server):
                     request_deserializer=rabbitMQ__pb2.CompositionRequest.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
-            'SendSqlDataRequest': grpc.unary_unary_rpc_method_handler(
-                    servicer.SendSqlDataRequest,
-                    request_deserializer=rabbitMQ__pb2.SqlDataRequest.FromString,
+            'SendRequest': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendRequest,
+                    request_deserializer=rabbitMQ__pb2.Request.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'SendPolicyUpdate': grpc.unary_unary_rpc_method_handler(
@@ -254,7 +254,7 @@ def add_RabbitMQServicer_to_server(servicer, server):
             ),
             'SendTest': grpc.unary_unary_rpc_method_handler(
                     servicer.SendTest,
-                    request_deserializer=rabbitMQ__pb2.SqlDataRequest.FromString,
+                    request_deserializer=rabbitMQ__pb2.Request.FromString,
                     response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             ),
             'SendMicroserviceComm': grpc.unary_unary_rpc_method_handler(
@@ -430,7 +430,7 @@ class RabbitMQ(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def SendSqlDataRequest(request,
+    def SendRequest(request,
             target,
             options=(),
             channel_credentials=None,
@@ -440,8 +440,8 @@ class RabbitMQ(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/dynamos.RabbitMQ/SendSqlDataRequest',
-            rabbitMQ__pb2.SqlDataRequest.SerializeToString,
+        return grpc.experimental.unary_unary(request, target, '/dynamos.RabbitMQ/SendRequest',
+            rabbitMQ__pb2.Request.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
@@ -475,7 +475,7 @@ class RabbitMQ(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/dynamos.RabbitMQ/SendTest',
-            rabbitMQ__pb2.SqlDataRequest.SerializeToString,
+            rabbitMQ__pb2.Request.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

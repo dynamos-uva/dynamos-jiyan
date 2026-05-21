@@ -20,7 +20,7 @@ func generateJobName(jobName string) (string, error) {
 	}
 
 	dataStewardName := strings.ToLower(serviceName)
-	logger.Sugar().Debugw("Pod info:", "dataStewardName: ", dataStewardName, "jobName: ", jobName)
+	logger.Sugar().Debugw("Pod info:", "dataStewardName", dataStewardName, "jobName", jobName)
 
 	// Get the jobname of this user
 	jobMutex.Lock()

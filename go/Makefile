@@ -1,13 +1,14 @@
+
 # Use Bash shell instead of default /bin/sh to support trap and extended features
 SHELL := /bin/bash
 # Replace slashes in the current Git branch name with dashes (e.g., issue/123 -> issue-123)
-branch_name := $(shell git rev-parse --abbrev-ref HEAD | sed 's#/#-#g')
+branch_name := $(shell git rev-parse --abbrev-ref HEAD | sed 's/\//-/g')
 # List of SQL-based microservices to build and push
 sql_microservices := sql-algorithm sql-anonymize sql-aggregate sql-test
 # List of DYNAMOS core services
 dynamos := sidecar policy-enforcer orchestrator agent api-gateway
 # Docker Hub account for tagging and pushing images
-dockerhub_account := dynamos1
+dockerhub_account := tamjiyan
 
 # Prepare Go project dependencies
 # Clean and verify Go module dependencies

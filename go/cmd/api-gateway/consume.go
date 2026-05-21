@@ -12,14 +12,12 @@ import (
 // We currently expect the following messages:
 // - requestApprovalResponse: a response to a requestApproval from the orchestrator
 func handleIncomingMessages(ctx context.Context, grpcMsg *pb.SideCarMessage) error {
-	logger.Debug("start api gateway handleIncomingMessages")
+	// logger.Debug("start api gateway handleIncomingMessages")
 	ctx, span, err := lib.StartRemoteParentSpan(ctx, serviceName+"/func: handleIncomingMessages", grpcMsg.Traces)
 	if err != nil {
 		logger.Sugar().Warnf("Error starting span: %v", err)
 	}
 	defer span.End()
-
-	logger.Sugar().Debugw("Type:", "MessageType", grpcMsg.Type)
 
 	switch grpcMsg.Type {
 	case "requestApprovalResponse":
@@ -35,14 +33,14 @@ func handleIncomingMessages(ctx context.Context, grpcMsg *pb.SideCarMessage) err
 			approvalRequest <- validation{response: requestApprovalResponse, localContext: ctx}
 			delete(requestApprovalMap, requestApprovalResponse.User.Id)
 		} else {
-			logger.Sugar().Error("No sessions found for this requestApprovalResponse flow")
+			logger.Sugar().Error("No sessions found for this requestApprovalResponse flow: ", requestApprovalResponse, ", ", requestApprovalMap[requestApprovalResponse.User.Id])
 		}
 		requestApprovalMutex.Unlock()
 	default:
 		logger.Sugar().Errorf("Unknown message type: %s", grpcMsg.Type)
 		return fmt.Errorf("unknown message type: %s", grpcMsg.Type)
 	}
-	logger.Debug("end orchestrator handleIncomingMessages")
+	// logger.Debug("end orchestrator handleIncomingMessages")
 
 	return nil
 }

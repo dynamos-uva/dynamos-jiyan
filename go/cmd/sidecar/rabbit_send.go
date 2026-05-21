@@ -195,7 +195,7 @@ func (s *serverInstance) SendCompositionRequest(ctx context.Context, in *pb.Comp
 
 }
 
-func (s *serverInstance) SendSqlDataRequest(ctx context.Context, in *pb.SqlDataRequest) (*emptypb.Empty, error) {
+func (s *serverInstance) SendRequest(ctx context.Context, in *pb.Request) (*emptypb.Empty, error) {
 	data, err := proto.Marshal(in)
 	if err != nil {
 		logger.Sugar().Errorf("Marshal requestApproval failed: %s", err)
@@ -207,10 +207,10 @@ func (s *serverInstance) SendSqlDataRequest(ctx context.Context, in *pb.SqlDataR
 	message := amqp.Publishing{
 		CorrelationId: in.RequestMetadata.CorrelationId,
 		Body:          data,
-		Type:          "sqlDataRequest",
+		Type:          "Request",
 	}
 
-	logger.Sugar().Debugf("SendSqlDataRequest destination queue: %v", in.RequestMetadata.DestinationQueue)
+	logger.Sugar().Debugf("SendRequest destination queue: %v", in.RequestMetadata.DestinationQueue)
 	go send(ctx, message, in.RequestMetadata.DestinationQueue, s, etcd.WithMaxElapsedTime(10*time.Second))
 	return &emptypb.Empty{}, nil
 
@@ -255,7 +255,7 @@ func (s *serverInstance) SendMicroserviceComm(ctx context.Context, in *pb.Micros
 	return &emptypb.Empty{}, nil
 }
 
-func (s *serverInstance) SendTest(ctx context.Context, in *pb.SqlDataRequest) (*emptypb.Empty, error) {
+func (s *serverInstance) SendTest(ctx context.Context, in *pb.Request) (*emptypb.Empty, error) {
 	data, err := proto.Marshal(in)
 	if err != nil {
 		logger.Sugar().Errorf("Marshal SendMicroserviceComm failed: %s", err)

@@ -16,7 +16,7 @@ func registerPolicyEnforcerConfiguration() {
 	lib.UnmarshalJsonFile(requestTypeConfigLocation, &requestsTypes)
 
 	for _, requestType := range requestsTypes {
-		etcd.SaveStructToEtcd[api.RequestType](etcdClient, fmt.Sprintf("/requestTypes/%s", requestType.Name), requestType)
+		etcd.SaveStructToEtcd(etcdClient, fmt.Sprintf("/requestTypes/%s", requestType.Name), requestType)
 	}
 
 	// Load archetypes
@@ -24,7 +24,7 @@ func registerPolicyEnforcerConfiguration() {
 	lib.UnmarshalJsonFile(archetypeConfigLocation, &archeTypes)
 
 	for _, archeType := range archeTypes {
-		etcd.SaveStructToEtcd[api.Archetype](etcdClient, fmt.Sprintf("/archetypes/%s", archeType.Name), archeType)
+		etcd.SaveStructToEtcd(etcdClient, fmt.Sprintf("/archetypes/%s", archeType.Name), archeType)
 	}
 
 	// Load labels and allowedOutputs (microservice.json)
@@ -33,7 +33,7 @@ func registerPolicyEnforcerConfiguration() {
 	lib.UnmarshalJsonFile(microserviceMetadataConfigLocation, &microservices)
 
 	for _, microservice := range microservices {
-		etcd.SaveStructToEtcd[api.MicroserviceMetadata](etcdClient, fmt.Sprintf("/microservices/%s/chainMetadata", microservice.Name), microservice)
+		etcd.SaveStructToEtcd(etcdClient, fmt.Sprintf("/microservices/%s/chainMetadata", microservice.Name), microservice)
 	}
 
 	// Load agreemnents  (agreemnents.json)
@@ -42,7 +42,7 @@ func registerPolicyEnforcerConfiguration() {
 	lib.UnmarshalJsonFile(agreementsConfigLocation, &agreements)
 
 	for _, agreement := range agreements {
-		etcd.SaveStructToEtcd[api.Agreement](etcdClient, fmt.Sprintf("/policyEnforcer/agreements/%s", agreement.Name), agreement)
+		etcd.SaveStructToEtcd(etcdClient, fmt.Sprintf("/policyEnforcer/agreements/%s", agreement.Name), agreement)
 	}
 
 	// Load agreemnents  (agreemnents.json)
@@ -51,7 +51,7 @@ func registerPolicyEnforcerConfiguration() {
 	lib.UnmarshalJsonFile(dataSetConfigLocation, &datasets)
 
 	for _, dataset := range datasets {
-		etcd.SaveStructToEtcd[*pb.Dataset](etcdClient, fmt.Sprintf("/datasets/%s", dataset.Name), dataset)
+		etcd.SaveStructToEtcd(etcdClient, fmt.Sprintf("/datasets/%s", dataset.Name), dataset)
 	}
 
 	// Load   optional_microservices.json

@@ -1,0 +1,27 @@
+{
+  "file": "./python/vfl-data/train.csv",
+  "delimiter": ",",
+  "sensitive": ["Survived", "Name"],
+  "partitions": [
+    {
+      "name": "outcomeData",
+      "outputDirectory": "./python/vfl-train-model/datasets/",
+      "columns": ["Survived"]
+    },
+    {
+      "name": "clientoneData",
+      "outputDirectory": "./python/vfl-train/datasets/",
+      "columns": ["Cabin", "Parch", "Pclass"]
+    },
+    {
+      "name": "clienttwoData",
+      "outputDirectory": "./python/vfl-train/datasets/",
+      "columns": ["Sex", "Title"]
+    },
+    {
+      "name": "clientthreeData",
+      "outputDirectory": "./python/vfl-train/datasets/",
+      "columns": ["Age", "Embarked", "Fare", "SibSp"]
+    }
+  ]
+}

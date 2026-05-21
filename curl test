@@ -1,0 +1,41 @@
+curl -H "Host: api-gateway.api-gateway.svc.cluster.local" \
+     -H "Content-Type: application/json" \
+     --data-raw '{
+       "type": "vflTrainModelRequest",
+       "user": {
+         "id": "1234",
+         "userName": "jake.jongejans@student.uva.nl"
+       },
+       "dataProviders": [
+         "server",
+         "clientone",
+         "clienttwo",
+         "clientthree"
+       ],
+       "data_request": {
+         "type": "vflTrainModelRequest",
+         "data": {
+           "learning_rate": 0.1,
+           "cycles": 180,
+           "policy_removal": -1,
+           "policy_reintroduction": -1,
+           "training_backtrack": 0
+         },
+         "requestMetadata": {}
+       }
+     }' \
+     "http://api-gateway.api-gateway.svc.cluster.local:80/api/v1/requestApproval"
+
+kubectl delete jobs --all -n clientone
+kubectl delete jobs --all -n clienttwo
+kubectl delete jobs --all -n clientthree
+kubectl delete jobs --all -n server    
+
+kubectl delete namespace ingress                           
+helm uninstall orchestrator
+helm uninstall surf
+helm uninstall agents
+helm uninstall api-gateway
+helm uninstall core
+
+

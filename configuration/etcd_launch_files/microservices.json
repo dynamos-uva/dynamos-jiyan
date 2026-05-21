@@ -41,5 +41,89 @@
         "invalidArchetypes": [
             "computeToData"
         ]
-    }
+    },
+    {
+        "name": "new-service",
+        "label": "dataProvider",
+        "allowedOutputs": [],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-merge-datasets",
+        "label": "dataProvider",
+        "allowedOutputs": ["ml-anonymize-dataset"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-anonymize-dataset",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-synthetic-dataset-generation", "ml-differential-privacy","ml-model-training"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-synthetic-dataset-generation",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-model-training"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-differential-privacy",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-model-training"],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-model-training",
+        "label": "computeProvider",
+        "allowedOutputs": [],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "ml-model-training",
+        "label": "computeProvider",
+        "allowedOutputs": [],
+        "invalidArchetypes": []
+    },
+    {
+        "name": "test-microservice",
+        "label": "computeProvider",
+        "allowedOutputs": ["ml-synthetic-dataset-generation", "ml-differential-privacy","ml-model-training"],
+        "invalidArchetypes": []
+    },
+    {
+    "name": "vfl-train-model",
+    "label": "computeProvider",
+    "allowedOutputs": ["vfl-train"],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "vfl-train",
+    "label": "computeProvider",
+    "allowedOutputs": [],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "vfl-train-model-demo",
+    "label": "computeProvider",
+    "allowedOutputs": ["vfl-train-demo"],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "vfl-train-demo",
+    "label": "computeProvider",
+    "allowedOutputs": [],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "anonymize-test",
+    "label": "computeProvider",
+    "allowedOutputs": [],
+    "invalidArchetypes": []
+  },
+  {
+    "name": "differential-p-test",
+    "label": "computeProvider",
+    "allowedOutputs": [],
+    "invalidArchetypes": []
+  }
 ]

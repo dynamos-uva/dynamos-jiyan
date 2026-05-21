@@ -13,7 +13,6 @@ import (
 	"github.com/Jorrit05/DYNAMOS/pkg/etcd"
 	"github.com/Jorrit05/DYNAMOS/pkg/lib"
 	"github.com/gorilla/handlers"
-	"go.opencensus.io/plugin/ochttp"
 	batchv1 "k8s.io/api/batch/v1"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -79,7 +78,10 @@ func main() {
 	go func() {
 		lib.StartConsumingWithRetry(serviceName, c, fmt.Sprintf("%s-in", serviceName), handleIncomingMessages, 5, 5*time.Second, receiveMutex)
 
-		wg.Done() // Decrement the WaitGroup counter when the goroutine finishes
+		logger.Sugar().Info("StartConsumingWithRetry will be done.")
+		wg.Done()
+
+		logger.Sugar().Info("StartConsumingWithRetry finished now.")
 	}()
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
@@ -87,22 +89,26 @@ func main() {
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	agentMux := http.NewServeMux()
-	agentMux.Handle(fmt.Sprintf("/agent/v1/sqlDataRequest/%s", strings.ToLower(serviceName)), &ochttp.Handler{Handler: sqlDataRequestHandler()})
-
-	// apiMux.Handle("/archetypes/", &ochttp.Handler{Handler: archetypesHandler(etcdClient, "/archetypes")})
+	agentMux.Handle(fmt.Sprintf("/agent/v1/vflTrainRequest/%s", strings.ToLower(serviceName)), requestHandler())
+	agentMux.Handle(fmt.Sprintf("/agent/v1/vflTrainModelRequest/%s", strings.ToLower(serviceName)), requestHandler())
 
 	wrappedAgentMux := authMiddleware(agentMux)
 
 	mux := http.NewServeMux()
-	mux.Handle(fmt.Sprintf("/agent/v1/sqlDataRequest/%s", strings.ToLower(serviceName)), wrappedAgentMux)
+	mux.Handle(fmt.Sprintf("/agent/v1/vflTrainRequest/%s", strings.ToLower(serviceName)), wrappedAgentMux)
+	mux.Handle(fmt.Sprintf("/agent/v1/vflTrainModelRequest/%s", strings.ToLower(serviceName)), wrappedAgentMux)
 
 	logger.Sugar().Infow("Starting http server on: ", "port", port)
 	go func() {
+		logger.Sugar().Info("Will listen and serve now!")
 		if err := http.ListenAndServe(port, api.LogMiddleware(handlers.CORS(originsOk, headersOk, methodsOk)(mux))); err != nil {
 			logger.Sugar().Fatalw("Error starting HTTP server: %s", err)
 		}
 	}()
 
+	logger.Sugar().Info("Waiting for main of agent to be done...")
 	wg.Wait()
+
+	logger.Sugar().Info("Main of agent is done now...")
 
 }

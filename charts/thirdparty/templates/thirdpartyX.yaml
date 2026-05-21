@@ -1,0 +1,84 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: %THIRDPARTY%
+#   namespace: %THIRDPARTY%
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: %THIRDPARTY%
+#   template:
+#     metadata:
+#       labels:
+#         app: %THIRDPARTY%
+#       annotations:
+#         "linkerd.io/inject" : enabled
+#     spec:
+#       nodeSelector:
+#         kubernetes.io/hostname: %THIRDPARTY%
+#       serviceAccountName: job-creator-%THIRDPARTY%
+#       containers:
+#       - name: %THIRDPARTY%
+#         image: {{ .Values.dockerArtifactAccount }}/agent:{{ .Values.branchNameTag }}
+#         imagePullPolicy: Always
+#         ports:
+#         - containerPort: 8080
+#         env:
+#         - name: DATA_STEWARD_NAME
+#           value: %THIRDPARTY%
+#         - name: OC_AGENT_HOST
+#           value: {{ .Values.tracingEndpoint }}
+#       - name: sidecar
+#         image: {{ .Values.dockerArtifactAccount }}/sidecar:{{ .Values.branchNameTag }}
+#         imagePullPolicy: Always
+#         env:
+#         - name: AMQ_PASSWORD
+#           valueFrom:
+#             secretKeyRef:
+#               name: rabbit
+#               key: password
+#         - name: AMQ_USER
+#           value: normal_user
+#         - name: OC_AGENT_HOST
+#           value: {{ .Values.tracingEndpoint }}
+#
+# ---
+#
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: %THIRDPARTY%
+#   namespace: %THIRDPARTY%
+# spec:
+#   selector:
+#     app: %THIRDPARTY%
+#   ports:
+#     - name: http-%THIRDPARTY%-api
+#       protocol: TCP
+#       port: 8080
+#       targetPort: 8080
+#   type: ClusterIP
+#
+#
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: %THIRDPARTY%-ingress
+#   namespace: %THIRDPARTY%
+#   annotations:
+#     nginx.ingress.kubernetes.io/service-upstream: "true"
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#   - host: %THIRDPARTY%.%THIRDPARTY%.svc.cluster.local
+#     http:
+#       paths:
+#       - pathType: Prefix
+#         path: "/agent/v1/vflTrainRequest/%THIRDPARTY%"
+#         backend:
+#           service:
+#             name: %THIRDPARTY%
+#             port:
+#               number: 8080

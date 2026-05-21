@@ -1,0 +1,4 @@
+grpc_addr = "localhost:"
+service_name = "differential-p-test"
+dataset_filepath = "/app/datasets"
+tracing_host = "collector.linkerd-jaeger:4317"

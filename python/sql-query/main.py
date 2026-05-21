@@ -10,7 +10,7 @@ import argparse
 from dynamos.ms_init import NewConfiguration
 from dynamos.signal_flow import signal_continuation, signal_wait
 from dynamos.logger import InitLogger
-from dynamos.tracer import InitTracer, pretty_print_span_context
+from dynamos.tracer import InitTracer
 
 from google.protobuf.empty_pb2 import Empty
 import microserviceCommunication_pb2 as msCommTypes
@@ -19,7 +19,6 @@ import threading
 import time
 import sys
 from opentelemetry.context.context import Context
-from opentelemetry import trace
 
 
 # --- DYNAMOS Interface code At the TOP ----------------------------------------------------
@@ -29,10 +28,7 @@ else:
     import config_local as config
 
 logger = InitLogger()
-tracer = InitTracer(config.service_name, config.tracing_host)
-# Debugging for traces:
-logger.debug(f"tracer host: {config.tracing_host}")
-logger.debug(f"tracer: {tracer}")
+# tracer = InitTracer(config.service_name, config.tracing_host)
 
 # Events to start the shutdown of this Microservice, can be used to call 'signal_shutdown'
 stop_event = threading.Event()
@@ -57,8 +53,7 @@ test = args.test
 
 #--------------------------------
 
-# Start span using the span context created in the request handler
-@tracer.start_as_current_span("load_and_query_csv")
+
 def load_and_query_csv(file_path_prefix, query):
     # Extract table names from the query
     table_names = re.findall(r'FROM (\w+)', query) + re.findall(r'JOIN (\w+)', query)
@@ -89,8 +84,7 @@ def load_and_query_csv(file_path_prefix, query):
 
     return result_df
 
-# Start span using the span context created in the request handler
-@tracer.start_as_current_span("dataframe_to_protobuf")
+
 def dataframe_to_protobuf(df):
     # Convert the DataFrame to a dictionary of lists (one for each column)
     data_dict = df.to_dict(orient='list')
@@ -115,6 +109,7 @@ def dataframe_to_protobuf(df):
 
     return data_struct, metadata
 
+
 def process_sql_data_request(sqlDataRequest, ctx):
     global config
     logger.debug("Start process_sql_data_request")
@@ -138,7 +133,7 @@ def process_sql_data_request(sqlDataRequest, ctx):
 def request_handler(msComm : msCommTypes.MicroserviceCommunication, ctx: Context):
     global ms_config
     logger.info(f"Received original request type: {msComm.request_type}")
-    
+
     # Ensure all connections have finished setting up before processing data
     signal_wait(wait_for_setup_event, wait_for_setup_condition)
 
@@ -146,16 +141,11 @@ def request_handler(msComm : msCommTypes.MicroserviceCommunication, ctx: Context
         if msComm.request_type == "sqlDataRequest":
             sqlDataRequest = rabbitTypes.SqlDataRequest()
             msComm.original_request.Unpack(sqlDataRequest)
-            
-            # Create a new span, using the context (ctx) passed to this function. In the background, the context 
-            # (metadata that helps combine data into a single trace) is set in the dynamos-python-lib/dynamos/ms_init.py file
-            # in the request_handler function (similar to the StartRemoteParentSpan() in tracing.go), which sets the 
-            # context (as ctx) to use for the spans (subsequent spans will also use this context automatically)
-            with tracer.start_as_current_span("process_sql_data_request", context=ctx) as parent_span:
-                data, metadata = process_sql_data_request(sqlDataRequest, ctx)
-                parent_span.set_attribute("handleMsCommunication finished:", metadata)
 
-            # Forward the result to the next service
+            # with tracer.start_as_current_span("process_sql_data_request", context=ctx) as span1:
+            data, metadata = process_sql_data_request(sqlDataRequest, ctx)
+                # span1.set_attribute("handleMsCommunication finished:", metadata)
+
             logger.debug(f"Forwarding result, metadata: {metadata}")
             ms_config.next_client.ms_comm.send_data(msComm, data, metadata)
             signal_continuation(stop_event, stop_microservice_condition)
